@@ -1,0 +1,30 @@
+---
+version: '3'
+
+set: [pipefail]
+shopt: [globstar]
+
+vars:
+  CLUSTER_DIR: '{{.ROOT_DIR}}/k8s'
+  TALOS_DIR: '{{.ROOT_DIR}}/talos'
+  BOOTSTRAP_DIR: '{{.CLUSTER_DIR}}/bootstrap'
+  TALOSCONFIG: '{{.TALOS_DIR}}/clusterconfig/talosconfig'
+  NODE_NUMBERS: 0 1 2
+  IP_PREFIX: 192.168.4.1
+  INIT_NODE_IP: '{{.IP_PREFIX}}0'
+
+includes:
+  bootstrap: .taskfiles/bootstrap
+  talos: .taskfiles/talos
+
+tasks:
+
+  default:
+    cmd: task --list
+    silent: true
+
+  # Ref: https://github.com/go-task/task/issues/608
+  noop:
+    internal: true
+    silent: true
+    cmd: noop() { :; }

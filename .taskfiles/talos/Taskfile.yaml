@@ -1,0 +1,106 @@
+version: "3"
+
+
+tasks:
+  nuke_and_pave:
+    desc: Nuke all nodes
+    summary: Reset and wipe all nodes on the cluster
+    prompt: Nuke and pave?
+    cmds:
+      - for:
+          var: NODE_NUMBERS
+        vars:
+          NODE_IP: "192.168.4.1{{ .ITEM }}"
+        task: nuke_node
+  nuke_node:
+    internal: true
+    desc: Nuke node
+    ignore_error: true
+    cmds:
+      - echo "Nuking node {{ .NODE_IP }}"
+      - talosctl reset --nodes {{ .NODE_IP }} --endpoints {{ .NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --debug --graceful=false
+
+  configs:
+    dir: "{{.TALOS_DIR}}"
+    desc: Generate configs
+    prompt: (re)generate configs?
+    cmds:
+      - op inject -i talsecret.yaml.tpl -o talsecret.yaml --force
+      - talhelper genconfig --config-file talconfig.yaml --secret-file talsecret.yaml
+      - rm talsecret.yaml
+      - cp {{ .TALOSCONFIG }} ~/.talos/config
+    preconditions:
+      - op user get --me
+      - which talosctl talhelper op
+    status:
+      - test -f {{ .TALOSCONFIG }}
+      - test -f clusterconfig/boondoggle-cp0.yaml
+      - test -f clusterconfig/boondoggle-cp1.yaml
+      - test -f clusterconfig/boondoggle-cp2.yaml
+
+  apply_config_cp0:
+    dir: "{{.TALOS_DIR}}"
+    desc: Apply config to cp0
+    prompt: Apply config to cp0?
+    preconditions:
+      - which talosctl
+    status:
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
+    cmd: 
+      task: apply_config
+      vars:
+        N: '0'
+  
+  apply_config_cp1_cp2:
+    dir: "{{.TALOS_DIR}}"
+    desc: Apply config to cp1 and cp2
+    prompt: Apply config to cp1 and cp2?
+    vars:
+      N: 1 2
+    cmds:
+      - for:
+          var: N
+        vars:
+          N: "{{ .ITEM }}"
+        task: apply_config
+    preconditions:
+      - which talosctl
+  
+  apply_config:
+    internal: true
+    dir: "{{ .TALOS_DIR }}"
+    desc: Apply config to node NODE_IP
+    preconditions:
+      - which talosctl
+    vars:
+      NODE_IP: "192.168.4.1{{ .N }}"
+      CONFIG_FILE: clusterconfig/boondoggle-cp{{ .N }}.yaml
+    cmds:
+      - echo "Applying config to node {{ .NODE_IP }}"
+      - "until ping -c 1 {{ .NODE_IP }} | grep '1 packets received, 0.0% packet loss' > /dev/null; do sleep 5; done"
+      - "until curl -m 1 {{ .NODE_IP }}:50000 2>&1 | grep 'curl: (52) Empty reply from server' > /dev/null; do sleep 5; done"
+      - talosctl apply-config --nodes {{ .NODE_IP }} --insecure --file {{ .CONFIG_FILE }}
+      - "until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done"
+
+  bootstrap_cp0:
+    dir: "{{.TALOS_DIR}}"
+    desc: Bootstrap cp0
+    prompt: Bootstrap cp0?
+    status:
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'bootstrap request received' > /dev/null
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null
+    deps:
+      - apply_config_cp0
+    cmds:
+      - "until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done"
+      - talosctl bootstrap --nodes {{ .INIT_NODE_IP }} --endpoints {{ .INIT_NODE_IP }} --talosconfig={{ .TALOSCONFIG }}
+      - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null; do sleep 5; done
+      - talosctl kubeconfig --nodes {{ .INIT_NODE_IP }} --endpoints {{ .INIT_NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --force
+    preconditions:
+      - op user get --me
+      - which talosctl
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
+
+  bootstrap:
+    cmds:
+      - task: bootstrap_cp0

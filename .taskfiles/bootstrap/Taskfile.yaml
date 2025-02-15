@@ -1,0 +1,17 @@
+---
+version: '3'
+
+tasks:
+
+  apps:
+    desc: Bootstrap Apps
+    prompt: Bootstrap apps into the Talos cluster?
+    cmds:
+      - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
+      - helmfile --file {{ .BOOTSTRAP_DIR }}/apps/helmfile.yaml apply
+    preconditions:
+      - op user get --me
+      - talosctl config info
+      - test -f {{ .BOOTSTRAP_DIR }}/apps/helmfile.yaml
+      - which curl jq helmfile kubectl op talosctl
+      - helm plugin list | grep diff
