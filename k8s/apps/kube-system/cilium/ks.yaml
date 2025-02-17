@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   targetNamespace: kube-system
-  path: ./kubernetes/apps/kube-system/cilium/app
+  path: ./k8s/apps/kube-system/cilium/app
   dependsOn:
     - name: cluster-apps
   sourceRef:
@@ -28,7 +28,7 @@ metadata:
   namespace: flux-system
 spec:
   targetNamespace: kube-system
-  path: ./kubernetes/apps/kube-system/cilium/bgp
+  path: ./k8s/apps/kube-system/cilium/bgp
   dependsOn:
     - name: cluster-apps-cilium
   sourceRef:
