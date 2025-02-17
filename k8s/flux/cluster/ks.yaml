@@ -23,7 +23,7 @@ metadata:
 spec:
   dependsOn:
     - name: cluster-meta
-  path: ./kubernetes/apps
+  path: ./k8s/apps
   prune: true
   sourceRef:
     kind: GitRepository
