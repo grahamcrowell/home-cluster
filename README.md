@@ -36,7 +36,7 @@ talosctl gen secrets -o talsecret.yaml
 3. Create 1password item from talos/talosecret.op.cli.json
 
 ```bash
-op item create --vault cluster --template talos/talosecret.json
+     --template talos/talosecret.json
 ```
 
 4. Delete talos/talosecret.json and talos/talsecret.yaml
