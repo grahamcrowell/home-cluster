@@ -50,7 +50,7 @@ tasks:
     desc: Generate configs
     prompt: (re)generate configs?
     cmds:
-      - op inject -i talsecret.yaml.tpl -o talsecret.yaml --force
+      - op inject -i talsecret.op.yaml -o talsecret.yaml --force
       - talhelper genconfig --config-file talconfig.yaml --secret-file talsecret.yaml
       - rm talsecret.yaml
       - cp {{ .TALOSCONFIG }} ~/.talos/config

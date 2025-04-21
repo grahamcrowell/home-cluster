@@ -12,9 +12,13 @@ vars:
   NODE_NUMBERS: 0 1 2
   IP_PREFIX: 192.168.4.1
   INIT_NODE_IP: '{{.IP_PREFIX}}0'
+  OP_CONNECT_SERVER: home-cluster
+  OP_CONNECT_TOKEN: home-cluster
+  OP_VAULT: cluster
 
 includes:
   bootstrap: .taskfiles/bootstrap
+  onepassword: .taskfiles/onepassword
   talos: .taskfiles/talos
 
 tasks:

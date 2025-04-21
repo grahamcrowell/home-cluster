@@ -1,0 +1,27 @@
+---
+version: "3"
+# https://developer.1password.com/docs/connect/get-started/?deploy=kubernetes&method=1password-com
+tasks:
+  connect:
+    desc: Create OnePassword connect server
+    prompt: Create new OnePassword connect server?
+    status:
+      - op connect server get {{ .OP_CONNECT_SERVER }}
+    cmds:
+      - op connect server create home-cluster --vaults {{ .OP_VAULT }}
+    preconditions:
+      - op user get --me
+      - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
+  connect_token:
+    desc: Create OnePassword connect server token
+    prompt: Create new OnePassword connect server token?
+    deps:
+      - connect
+    status:
+      - op connect token list --format json | jq --exit-status '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}")'
+    cmds:
+      - op connect token create {{ .OP_CONNECT_SERVER_TOKEN }} --server {{ .OP_CONNECT_SERVER }} --vault {{ .OP_VAULT }} 
+    preconditions:
+      - op user get --me
+      - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
+      - op connect server get {{ .OP_CONNECT_SERVER }}
