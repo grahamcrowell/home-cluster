@@ -38,6 +38,13 @@ releases:
           - apply
           - --server-side
           - --filename=../kubernetes/apps/external-secrets/onepassword/store/clustersecretstore.yaml
+      - # Error: unable to build kubernetes objects from release manifest: resource mapping not found for name: "cert-manager" namespace: "cert-manager" from "": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
+        events: ['postsync']
+        command: kubectl
+        args:
+          - apply
+          - --server-side
+          - --filename=https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
     version: 1.39.2
 
   - chart: jetstack/cert-manager
