@@ -1,0 +1,30 @@
+---
+apiVersion: upgrade.cattle.io/v1
+kind: Plan
+metadata:
+  name: talos
+spec:
+  version: ${TALOS_VERSION}
+  concurrency: 1
+  exclusive: true
+  serviceAccountName: system-upgrade
+  secrets:
+    - name: system-upgrade
+      path: /var/run/secrets/talos.dev
+      ignoreUpdates: true
+  nodeSelector:
+    matchExpressions:
+      - key: kubernetes.io/os
+        operator: In
+        values: ["linux"]
+  upgrade:
+    image: ghcr.io/jfroy/tnu:0.4.1
+    envs:
+      - name: NODE_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.hostIP
+    args:
+      - --node=$(NODE_IP)
+      - --tag=$(SYSTEM_UPGRADE_PLAN_LATEST_VERSION)
+      - --powercycle

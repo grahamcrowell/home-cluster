@@ -1,0 +1,3 @@
+---
+providerRegex: ^(m\d+)$
+bypassDnsResolution: true

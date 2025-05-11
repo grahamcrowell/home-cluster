@@ -1,0 +1,149 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app qbittorrent
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 2
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  dependsOn:
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  values:
+    controllers:
+      qbittorrent:
+        annotations:
+          reloader.stakater.com/auto: "true"
+          configmap.reloader.stakater.com/reload: qbittorrent-scripts
+
+        containers:
+          app:
+            image:
+              repository: ghcr.io/home-operations/qbittorrent
+              tag: 5.0.4@sha256:995c561247b069c10b1fa098186f35b3155c2df63912041f70637a9232755756
+            env:
+              TZ: America/Vancouver
+              QBT_WEBUI_PORT: &port 8080
+              QBT_TORRENTING_PORT: &bittorrentPort 50413
+              QBT_Preferences__WebUI__AlternativeUIEnabled: false
+              QBT_Preferences__WebUI__AuthSubnetWhitelistEnabled: true
+              QBT_Preferences__WebUI__AuthSubnetWhitelist: |-
+                10.244.0.0/16, 192.168.0.0/16, 10.0.40.0/24
+              QBT_Preferences__WebUI__LocalHostAuth: false
+              QBT_BitTorrent__Session__Interface: eth0
+              QBT_BitTorrent__Session__InterfaceAddress:
+                valueFrom:
+                  fieldRef:
+                    fieldPath: status.podIP
+              QBT_BitTorrent__Session__InterfaceName: eth0
+              CROSS_SEED_ENABLED: true
+              CROSS_SEED_HOST: cross-seed.media.svc.cluster.local
+              CROSS_SEED_PORT: &cross-seed-port 2468
+              CROSS_SEED_SLEEP_INTERVAL: 0
+            envFrom:
+              - secretRef:
+                  name: qbittorrent-secret
+            probes:
+              liveness: &probes
+                enabled: true
+                custom: true
+                spec:
+                  httpGet:
+                    path: /api/v2/app/version
+                    port: *port
+                  initialDelaySeconds: 0
+                  periodSeconds: 10
+                  timeoutSeconds: 1
+                  failureThreshold: 30
+              readiness: *probes
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: ["ALL"] }
+            resources:
+              requests:
+                cpu: 100m
+              limits:
+                memory: 16Gi
+
+    defaultPodOptions:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        runAsNonRoot: true
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups:
+          - 65539
+
+    service:
+      app:
+        controller: *app
+        type: LoadBalancer
+        annotations:
+          lbipam.cilium.io/ips: 10.0.20.80
+        ports:
+          http:
+            port: *port
+          bittorrent:
+            enabled: true
+            port: *bittorrentPort
+            protocol: TCP
+          cross-seed:
+            port: *cross-seed-port
+
+    route:
+      app:
+        hostnames: ["{{ .Release.Name }}.chestr.dev"]
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/icon: qbittorrent.png
+          gethomepage.dev/name: qBittorrent
+          gethomepage.dev/group: Downloads
+          gethomepage.dev/widget.type: *app
+          gethomepage.dev/widget.url: http://qbittorrent.media.svc.cluster.local:8080
+        parentRefs:
+          - name: internal
+            namespace: networking
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: *app
+                port: *port
+
+    persistence:
+      config:
+        existingClaim: *app
+      cross-seeds:
+        type: emptyDir
+      media:
+        type: nfs
+        server: lochnas.chestr.dev
+        path: /volume1/shared/media
+        globalMounts:
+          - path: /media
+      scripts:
+        type: configMap
+        name: qbittorrent-scripts
+        defaultMode: 0775
+        globalMounts:
+          - readOnly: true
+      secret-file:
+        type: secret
+        name: cross-seed-secret
+        globalMounts:
+          - path: /config/config.js
+            subPath: config.js
+            readOnly: true

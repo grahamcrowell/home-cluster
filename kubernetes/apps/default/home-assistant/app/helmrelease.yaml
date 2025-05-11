@@ -1,0 +1,132 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app home-assistant
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 2
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  dependsOn:
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  values:
+    controllers:
+      home-assistant:
+        pod:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"multus-iot",
+                "namespace": "networking",
+                "ips": ["10.0.10.250/24"]
+              }]
+        annotations:
+          reloader.stakater.com/auto: "true"
+
+        containers:
+          app:
+            image:
+              repository: ghcr.io/home-operations/home-assistant
+              tag: 2025.4.2@sha256:a0da02d5929788d34e589f0d7e185f9263204c7406ec64fae3a792223906e511
+            envFrom:
+              - secretRef:
+                  name: home-assistant-secret
+            env:
+              TZ: America/Vancouver
+
+          vscode-tunnel:
+            image:
+              repository: ghcr.io/mchestr/vscode-tunnel
+              tag: 1.99.3@sha256:474da69dc2a2d401af15e1918f8d746db53d89092aed63b672c53ac4bdc6ab14
+
+    defaultPodOptions:
+      hostname: home-assistant
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: &port 8123
+
+    route:
+      app:
+        hostnames:
+          - "{{ .Release.Name }}.chestr.dev"
+          - home.chestr.dev
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Home
+          gethomepage.dev/name: Home Assistant
+          gethomepage.dev/icon: home-assistant.png
+        parentRefs:
+          - name: external
+            namespace: networking
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: *app
+                port: *port
+
+    persistence:
+      config:
+        existingClaim: *app
+        globalMounts:
+          - path: /config
+
+      deploykey:
+        type: secret
+        name: home-assistant-deploykey-secret
+        advancedMounts:
+          home-assistant:
+            vscode-tunnel:
+              - path: /home/kah/.ssh
+      vscode-tunnel:
+        size: 4Gi
+        storageClass: ceph-block
+        accessMode: ReadWriteOnce
+        advancedMounts:
+          home-assistant:
+            vscode-tunnel:
+              - path: /.vscode
+
+    networkpolicies:
+      paperless:
+        controller: home-assistant
+
+        policyTypes:
+          - Ingress
+
+        rules:
+          ingress:
+            - from:
+                - podSelector:
+                    matchLabels:
+                      app.kubernetes.io/component: proxy
+                      app.kubernetes.io/managed-by: envoy-gateway
+                      app.kubernetes.io/name: envoy
+                      gateway.envoyproxy.io/owning-gateway-name: external
+                  namespaceSelector:
+                    matchLabels:
+                      kubernetes.io/metadata.name: networking
+              ports:
+                - protocol: TCP
+                  port: *port

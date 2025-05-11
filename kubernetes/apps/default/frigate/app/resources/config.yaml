@@ -1,0 +1,228 @@
+---
+logger:
+  default: info
+
+mqtt:
+  client_id: frigate
+  host: emqx-listeners.default.svc.cluster.local
+  topic_prefix: frigate
+  user: "{FRIGATE_MQTT_USERNAME}"
+  password: "{FRIGATE_MQTT_PASSWORD}"
+
+database:
+  path: /data/frigate.db
+
+birdseye:
+  enabled: true
+
+detectors:
+  coral:
+    type: edgetpu
+    device: usb
+
+semantic_search:
+  enabled: true
+  reindex: false
+  model_size: large
+
+genai:
+  enabled: false
+  provider: openai
+  api_key: "{FRIGATE_FRIGATE_OPENAI_API_KEY}"
+  model: gpt-4o-mini
+
+model:
+  # https://docs.frigate.video/configuration/objects
+  labelmap:
+    2: vehicle # car
+    3: vehicle # motorcycle
+    4: vehicle # airplane
+    5: vehicle # bus
+    6: vehicle # train
+    7: vehicle # car
+    8: vehicle # boat
+    15: animal # bird
+    16: animal # cat
+    17: animal # dog
+    18: animal # horse
+    19: animal # sheep
+    20: animal # cow
+    21: animal # elephant
+    22: animal # bear
+    23: animal # zebra
+    24: animal # giraffe
+    26: package # backpack
+    30: package # handbag
+    32: package # suitcase
+
+ffmpeg:
+  global_args: ["-hide_banner", "-loglevel", "warning"]
+  hwaccel_args: preset-intel-qsv-h264
+
+snapshots:
+  enabled: true
+  timestamp: true
+  bounding_box: true
+  retain:
+    default: 2
+
+record:
+  enabled: true
+  retain:
+    days: 14
+    mode: all
+  alerts:
+    retain:
+      days: 90
+      mode: active_objects
+  detections:
+    retain:
+      days: 90
+      mode: active_objects
+
+objects:
+  track:
+    - person
+    - vehicle
+    - animal
+    - bike
+    - package
+  filters:
+    person:
+      min_area: 5000
+      max_area: 100000
+      threshold: 0.7
+
+audio:
+  enabled: true
+  listen:
+    - alarm
+    - ambulance
+    - bang
+    - break
+    - breaking
+    - emergency_vehicle
+    - fire_alarm
+    - glass
+    - knock
+    - noise
+    - police_car
+    - scream
+    - siren
+    - smash
+    - speech
+    - tap
+    - yell
+
+go2rtc:
+  webrtc:
+    listen: :8555
+    candidates:
+      - 10.0.20.60:8555
+      - stun:8555
+    ice_servers:
+      - urls:
+          - stun:stun.cloudflare.com:3478
+  streams:
+    living_room_hd:
+      - ffmpeg:http://192.168.200.25/flv?port=1935&app=bcs&stream=channel0_main.bcs&user={FRIGATE_LIVING_ROOM_CAMERA_USERNAME}&password={FRIGATE_LIVING_ROOM_CAMERA_PASSWORD}#video=copy#audio=copy#audio=opus
+    living_room_sd:
+      - ffmpeg:http://192.168.200.25/flv?port=1935&app=bcs&stream=channel0_ext.bcs&user={FRIGATE_LIVING_ROOM_CAMERA_USERNAME}&password={FRIGATE_LIVING_ROOM_CAMERA_PASSWORD}
+    doorbell_hd:
+      - rtsps://10.0.40.1:7441/KZjqe7cXROBkVewl
+    doorbell_sd:
+      - rtspx://10.0.40.1:7441/NCjKjmbsiMjdPJkH
+    doorbell_package:
+      - rtspx://10.0.40.1:7441/D9DfIKJZfH6Dz9Oh
+    catcam:
+      - onvif://{FRIGATE_CATCAM_CAMERA_USERNAME}:{FRIGATE_CATCAM_CAMERA_PASSWORD}@192.168.200.104:8000
+cameras:
+  living_room:
+    genai:
+      enabled: false
+    ffmpeg:
+      output_args:
+        record: preset-record-generic-audio-aac
+      inputs:
+        - path: rtsp://127.0.0.1:8554/living_room_hd?video=copy&audio=aac
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - record
+        - path: rtsp://127.0.0.1:8554/living_room_sd?video=copy&audio=aac
+          input_args: preset-rtsp-restream-low-latency
+          roles:
+            - detect
+            - audio
+    motion:
+      mask:
+        - 0.735,0,0.73,0.074,0.277,0.076,0.281,0
+    live:
+      stream_name: living_room_hd
+    # Enable PTZ support
+    onvif:
+      host: 192.168.200.25
+      port: 8000
+      user: "{FRIGATE_LIVING_ROOM_CAMERA_USERNAME}"
+      password: "{FRIGATE_LIVING_ROOM_CAMERA_PASSWORD}"
+
+  doorbell:
+    genai:
+      enabled: false
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/doorbell_sd?video=copy&audio=aac
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+            - audio
+    live:
+      stream_name: doorbell_hd
+
+  doorbell_package:
+    audio:
+      enabled: false
+    genai:
+      enabled: false
+    ffmpeg:
+      inputs:
+        - path: rtsp://127.0.0.1:8554/doorbell_package?video=copy
+          input_args: preset-rtsp-restream
+          roles:
+            - detect
+    live:
+      stream_name: doorbell_package
+
+  catcam:
+    audio:
+      enabled: false
+    genai:
+      enabled: false
+    ffmpeg:
+      output_args:
+        record: preset-record-generic-audio-aac
+      inputs:
+        - path: rtsp://127.0.0.1:8554/catcam?video=copy&audio=aac
+          input_args: preset-rtsp-restream
+          roles:
+            - record
+            - detect
+    motion:
+      mask:
+        - 0.025,0.039,0.263,0.039,0.265,0.087,0.023,0.086
+    live:
+      stream_name: catcam
+    onvif:
+      host: 192.168.200.104
+      port: 8000
+      user: "{FRIGATE_CATCAM_CAMERA_USERNAME}"
+      password: "{FRIGATE_CATCAM_CAMERA_PASSWORD}"
+
+auth:
+  enabled: false
+
+proxy:
+  header_map:
+    user: remote-user
+
+tls:
+  enabled: false

@@ -1,0 +1,78 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: &app esphome
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: app-template
+  maxHistory: 2
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+  uninstall:
+    keepHistory: false
+  dependsOn:
+    - name: rook-ceph-cluster
+      namespace: rook-ceph
+  values:
+    controllers:
+      esphome:
+        pod:
+          annotations:
+            k8s.v1.cni.cncf.io/networks: |
+              [{
+                "name":"multus-iot",
+                "namespace": "networking",
+                "ips": ["10.0.10.245/24"]
+              }]
+        annotations:
+          reloader.stakater.com/auto: "true"
+
+        containers:
+          app:
+            image:
+              repository: ghcr.io/esphome/esphome
+              tag: 2025.4.0@sha256:a4fd81a864d41a376651321d6d07bb21872a739ab2019e8fd6597d25dbcf3e4b
+            env:
+              TZ: America/Vancouver
+
+    service:
+      app:
+        controller: *app
+        ports:
+          http:
+            port: &port 6052
+
+    route:
+      app:
+        hostnames: ["{{ .Release.Name }}.chestr.dev"]
+        annotations:
+          gethomepage.dev/enabled: "true"
+          gethomepage.dev/group: Automation
+          gethomepage.dev/name: ESPHome
+          gethomepage.dev/icon: esphome.png
+          gethomepage.dev/widget.type: esphome
+          gethomepage.dev/widget.url: http://esphome.default.svc.cluster.local:6052
+        parentRefs:
+          - name: internal
+            namespace: networking
+            sectionName: https
+        rules:
+          - backendRefs:
+              - name: *app
+                port: *port
+
+    persistence:
+      config:
+        existingClaim: *app
+      esphome-cache:
+        type: emptyDir
+        globalMounts:
+          - path: /config/.esphome
