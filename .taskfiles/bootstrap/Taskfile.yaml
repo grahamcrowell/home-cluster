@@ -3,22 +3,26 @@ version: '3'
 
 tasks:
 
-  bootstrap:
+  all:
+    desc: Bootstrap the cluster
+    summary: Bootstrap the cluster
+    prompt: Bootstrap the cluster?
     cmds:
       - task: bootstrap_cp0
       - task: apply_config_cp1_cp2
       - task: 1password
-      - task: apps
+      # - task: apps
 
 # Talos tasks
   cluster_status:
     desc: Cluster status
     summary: Determine status of the cluster
-    
+    ignore_error: true
     cmds:
       - for:
           var: NODE_NUMBERS
         vars:
+          NODE: "cp{{ .ITEM }}"
           NODE_IP: "192.168.4.1{{ .ITEM }}"
         task: node_check
 
@@ -29,12 +33,11 @@ tasks:
     silent: true
     internal: true
     cmds:
-      - cmd: echo "Pinging node {{ .NODE_IP }}"
-      - cmd: ping -t 1 -c 1 {{ .NODE_IP }} | grep '1 packets received, 0.0% packet loss' >/dev/null || { echo "Node {{ .NODE_IP }} unreachable"; exit 1; }
-      - cmd: echo "OK - Ping successful"
-      - cmd: echo "Checking if config applied"
-      - cmd: talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "talos config has been applied to {{ .NODE_IP }}" || { echo "talos config has not been applied to {{ .NODE_IP }}"; exit 1; }
-      - cmd: echo "OK - Confirmed config has been applied"
+      - printf "\nChecking node {{ .NODE }}\n"
+      - echo "Pinging node {{ .NODE_IP }}"
+      - ping -t 1 -c 1 {{ .NODE_IP }} | grep '1 packets received, 0.0% packet loss' >/dev/null && echo "OK - Ping successful" || { echo "ERROR - Node {{ .NODE_IP }} unreachable"; exit 1; }
+      - echo "Checking if config applied"
+      - talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "OK - talos config has been applied to {{ .NODE_IP }}" || { echo "ERROR - talos config has not been applied to {{ .NODE_IP }}"; exit 1; }
 
   nuke_and_pave:
     desc: Nuke all nodes
@@ -75,21 +78,21 @@ tasks:
   apply_config_cp0:
     dir: "{{.TALOS_DIR}}"
     desc: Apply Talos config to cp0
-    prompt: Apply Talos config to cp0?
     preconditions:
       - which talosctl
       - "curl -m 1 {{ .INIT_NODE_IP }}:50000 2>&1 | grep 'curl: (52) Empty reply from server' > /dev/null"
     status:
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
-    cmd:
-      task: apply_config
-      vars:
-        N: '0'
+    cmds:
+      - task: apply_config
+        vars:
+          N: '0'
+      - echo "Waiting for cp0 to be ready"
+      - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done
   
   apply_config_cp1_cp2:
     dir: "{{.TALOS_DIR}}"
     desc: Apply Talos config to cp1 and cp2
-    prompt: Apply Talos config to cp1 and cp2?
     vars:
       N: 1 2
     deps:
@@ -100,16 +103,10 @@ tasks:
         vars:
           N: "{{ .ITEM }}"
         task: apply_config
+      - echo "Waiting for nodes to be ready"
+      # - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
     preconditions:
       - which talosctl
-
-  nuke_required:
-    cmds:
-      - for:
-          var: NODE_NUMBERS
-        vars:
-          NODE_IP: "192.168.4.1{{ .ITEM }}"
-        cmd: "curl -m 1 {{ .NODE_IP }}:50000 2>&1 | grep 'curl: (7) Failed to connect to'"
   
   apply_config:
     internal: true
@@ -125,14 +122,13 @@ tasks:
       NODE_IP: "192.168.4.1{{ .N }}"
       CONFIG_FILE: clusterconfig/boondoggle-cp{{ .N }}.yaml
     cmds:
-      - echo "Applying Talos config to node {{ .NODE_IP }}"
+      - echo "Applying Talos config to node {{ .N }}"
       - talosctl apply-config --nodes {{ .NODE_IP }} --insecure --file {{ .CONFIG_FILE }}
       - "until talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1; do sleep 5; done"
 
   bootstrap_cp0:
     dir: "{{.TALOS_DIR}}"
     desc: Bootstrap Talos on cp0
-    prompt: Bootstrap Talos on cp0?
     status:
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'bootstrap request received' > /dev/null
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null
@@ -180,11 +176,9 @@ tasks:
 # Kubernetes tasks
   apps:
     desc: Bootstrap Kubernetes Apps [ROOK_DISK=required]
-    # prompt: Bootstrap Kubernetes Apps?
     cmds:
       - kubectl config set-cluster {{ .CONTEXT }} --server https://{{ .RANDOM_CONTROLLER }}:6443
       - defer: talosctl kubeconfig --nodes {{ .RANDOM_CONTROLLER }} --force {{ .CLUSTER_DIR }}
-      # - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
       - echo {{ .ROOK_DISK }}
       - echo {{ .BLOCK_DEVICES_RESPONSE }}
       - for: { var: BLOCK_DEVICES }
@@ -192,8 +186,6 @@ tasks:
           echo "Wiping disk {{ .ITEM }} on {{ .KEY }}"
           talosctl --nodes {{ .KEY }} wipe disk {{ .ITEM }}
       - op inject -i  {{ .BOOTSTRAP_KUBERNETES_DIR }}/resources.yaml | kubectl apply --server-side --filename -
-      # Error: unable to build kubernetes objects from release manifest: resource mapping not found for name: "cert-manager" namespace: "cert-manager" from "": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
-      # - kubectl apply --server-side -f https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
       - helmfile --file {{ .BOOTSTRAP_KUBERNETES_DIR }}/helmfile.yaml apply --skip-diff-on-install --suppress-diff
     requires:
       vars: [ROOK_DISK]

@@ -18,10 +18,7 @@
 ### not (yet) used
 
 -   flux `brew install fluxcd/tap/flux`
--   minijinja-cli `brew install minijinja-cli`
 -   helm convert `helm plugin install https://github.com/ContainerSolutions/helm-convert`
--   sops `brew install sops`
--   age `brew install age`
 
 ## Generate secrets for Talos and save as 1password item
 
