@@ -3,15 +3,210 @@ version: '3'
 
 tasks:
 
-  apps:
-    desc: Bootstrap Apps
-    prompt: Bootstrap apps into the Talos cluster?
+  all:
+    desc: Bootstrap the cluster
+    summary: Bootstrap the cluster
+    prompt: Bootstrap the cluster?
     cmds:
-      - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
-      - helmfile --file {{ .BOOTSTRAP_DIR }}/apps/helmfile.yaml apply
+      - task: bootstrap_cp0
+      - task: apply_config_cp1_cp2
+      - task: 1password
+      # - task: apps
+
+# Talos tasks
+  cluster_status:
+    desc: Cluster status
+    summary: Determine status of the cluster
+    ignore_error: true
+    cmds:
+      - for:
+          var: NODE_NUMBERS
+        vars:
+          NODE: "cp{{ .ITEM }}"
+          NODE_IP: "192.168.4.1{{ .ITEM }}"
+        task: node_check
+
+  node_check:
+    desc: Node status
+    summary: Determine status of the node
+    ignore_error: false
+    silent: true
+    internal: true
+    cmds:
+      - printf "\nChecking node {{ .NODE }}\n"
+      - echo "Pinging node {{ .NODE_IP }}"
+      - ping -t 1 -c 1 {{ .NODE_IP }} | grep '1 packets received, 0.0% packet loss' >/dev/null && echo "OK - Ping successful" || { echo "ERROR - Node {{ .NODE_IP }} unreachable"; exit 1; }
+      - echo "Checking if config applied"
+      - talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "OK - talos config has been applied to {{ .NODE_IP }}" || { echo "ERROR - talos config has not been applied to {{ .NODE_IP }}"; exit 1; }
+
+  nuke_and_pave:
+    desc: Nuke all nodes
+    summary: Reset and wipe all nodes on the cluster
+    prompt: Nuke and pave?
+    cmds:
+      - for:
+          var: NODE_NUMBERS
+        vars:
+          NODE_IP: "192.168.4.1{{ .ITEM }}"
+        task: nuke_node
+  nuke_node:
+    internal: true
+    desc: Nuke node
+    ignore_error: true
+    cmds:
+      - echo "Nuking node {{ .NODE_IP }}"
+      - talosctl reset --nodes {{ .NODE_IP }} --endpoints {{ .NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --debug --graceful=false
+
+  configs:
+    dir: "{{.TALOS_DIR}}"
+    desc: Generate configs
+    prompt: (re)generate configs?
+    cmds:
+      - op inject -i talsecret.op.yaml -o talsecret.yaml --force
+      - talhelper genconfig --config-file talconfig.yaml --secret-file talsecret.yaml
+      - rm talsecret.yaml
+      - cp {{ .TALOSCONFIG }} ~/.talos/config
+    preconditions:
+      - op user get --me
+      - which talosctl talhelper op
+    status:
+      - test -f {{ .TALOSCONFIG }}
+      - test -f clusterconfig/boondoggle-cp0.yaml
+      - test -f clusterconfig/boondoggle-cp1.yaml
+      - test -f clusterconfig/boondoggle-cp2.yaml
+
+  apply_config_cp0:
+    dir: "{{.TALOS_DIR}}"
+    desc: Apply Talos config to cp0
+    preconditions:
+      - which talosctl
+      - "curl -m 1 {{ .INIT_NODE_IP }}:50000 2>&1 | grep 'curl: (52) Empty reply from server' > /dev/null"
+    status:
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
+    cmds:
+      - task: apply_config
+        vars:
+          N: '0'
+      - echo "Waiting for cp0 to be ready"
+      - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done
+  
+  apply_config_cp1_cp2:
+    dir: "{{.TALOS_DIR}}"
+    desc: Apply Talos config to cp1 and cp2
+    vars:
+      N: 1 2
+    deps:
+      - bootstrap_cp0
+    cmds:
+      - for:
+          var: N
+        vars:
+          N: "{{ .ITEM }}"
+        task: apply_config
+      - echo "Waiting for nodes to be ready"
+      # - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
+    preconditions:
+      - which talosctl
+  
+  apply_config:
+    internal: true
+    dir: "{{ .TALOS_DIR }}"
+    desc: Apply Talos config to node NODE_IP
+    preconditions:
+      - which talosctl
+      - test -f clusterconfig/boondoggle-cp{{ .N }}.yaml
+      - ping -c 1 {{ .NODE_IP }} | grep '1 packets received, 0.0% packet loss'
+    status:
+      - talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "talos config has been applied to {{ .NODE_IP }}"
+    vars:
+      NODE_IP: "192.168.4.1{{ .N }}"
+      CONFIG_FILE: clusterconfig/boondoggle-cp{{ .N }}.yaml
+    cmds:
+      - echo "Applying Talos config to node {{ .N }}"
+      - talosctl apply-config --nodes {{ .NODE_IP }} --insecure --file {{ .CONFIG_FILE }}
+      - "until talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1; do sleep 5; done"
+
+  bootstrap_cp0:
+    dir: "{{.TALOS_DIR}}"
+    desc: Bootstrap Talos on cp0
+    status:
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'bootstrap request received' > /dev/null
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null
+    deps:
+      - apply_config_cp0
+    cmds:
+      - "until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done"
+      - talosctl bootstrap --nodes {{ .INIT_NODE_IP }} --endpoints {{ .INIT_NODE_IP }} --talosconfig={{ .TALOSCONFIG }}
+      - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null; do sleep 5; done
+      - talosctl kubeconfig --nodes {{ .INIT_NODE_IP }} --endpoints {{ .INIT_NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --force
+    preconditions:
+      - op user get --me
+      - which talosctl
+      - ping -t 1 -c 1 {{ .INIT_NODE_IP }} | grep '1 packets received, 0.0% packet loss' >/dev/null
+      - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
+
+# 1Password tasks
+  1password:
+    desc: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN }} on server named {{ .OP_CONNECT_SERVER }}
+    prompt: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN }} on server named {{ .OP_CONNECT_SERVER }}?
+    deps:
+      - connect_server
+    status:
+      - op connect token list --format json | jq --exit-status '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}")'
+    cmds:
+      - token=$(op connect token create {{ .OP_CONNECT_TOKEN }} --server {{ .OP_CONNECT_SERVER }} --vault {{ .OP_VAULT }}) && op item create --vault {{ .OP_VAULT }} --category "API Credential" --title {{.OP_CONNECT_TOKEN}} "credential=$token"
+    preconditions:
+      - op user get --me
+      - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
+      - op connect server get {{ .OP_CONNECT_SERVER }}
+  connect_server:
+    desc: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }}
+    prompt: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }}?
+    internal: true
+    status:
+      - op connect server get {{ .OP_CONNECT_SERVER }}
+      - op document get {{ .OP_CONNECT_CREDENTIALS_NAME }} --vault {{ .OP_VAULT }} > /dev/null
+    cmds:
+      - op connect server create {{ .OP_CONNECT_SERVER }} --vaults {{ .OP_VAULT }}
+      - cat 1password-credentials.json | op document create --vault {{ .OP_VAULT }} --file-name 1password-credentials.json --title {{ .OP_CONNECT_CREDENTIALS_NAME }}
+    preconditions:
+      - op user get --me
+      - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
+
+# Kubernetes tasks
+  apps:
+    desc: Bootstrap Kubernetes Apps [ROOK_DISK=required]
+    cmds:
+      - kubectl config set-cluster {{ .CONTEXT }} --server https://{{ .RANDOM_CONTROLLER }}:6443
+      - defer: talosctl kubeconfig --nodes {{ .RANDOM_CONTROLLER }} --force {{ .CLUSTER_DIR }}
+      - echo {{ .ROOK_DISK }}
+      - echo {{ .BLOCK_DEVICES_RESPONSE }}
+      - for: { var: BLOCK_DEVICES }
+        cmd: |
+          echo "Wiping disk {{ .ITEM }} on {{ .KEY }}"
+          talosctl --nodes {{ .KEY }} wipe disk {{ .ITEM }}
+      - op inject -i  {{ .BOOTSTRAP_KUBERNETES_DIR }}/resources.yaml | kubectl apply --server-side --filename -
+      - helmfile --file {{ .BOOTSTRAP_KUBERNETES_DIR }}/helmfile.yaml apply --skip-diff-on-install --suppress-diff
+    requires:
+      vars: [ROOK_DISK]
+    vars:
+      BLOCK_DEVICES_FILTER: |-
+        map(select(.spec.model == "{{ .ROOK_DISK }}"))
+          | group_by(.node)
+          | map({ (.[0].node): (map(.metadata.id) | join(" ")) })
+          | add
+      BLOCK_DEVICES_RESPONSE:
+        sh: talosctl get disks --output json | jq --compact-output --slurp '{{ .BLOCK_DEVICES_FILTER }}'
+      BLOCK_DEVICES:
+        ref: fromJson .BLOCK_DEVICES_RESPONSE
+      CONTEXT:
+        sh: talosctl config info --output json | jq --raw-output '.context'
+      RANDOM_CONTROLLER:
+        sh: talosctl config info --output json | jq --raw-output '.endpoints[]' | shuf -n 1
     preconditions:
       - op user get --me
       - talosctl config info
-      - test -f {{ .BOOTSTRAP_DIR }}/apps/helmfile.yaml
-      - which curl jq helmfile kubectl op talosctl
-      - helm plugin list | grep diff
+      - talosctl --nodes {{ .RANDOM_CONTROLLER }} get machineconfig
+      - test -f {{ .BOOTSTRAP_KUBERNETES_DIR }}/helmfile.yaml
+      - test -f {{ .BOOTSTRAP_KUBERNETES_DIR }}/resources.yaml
+      - which helmfile jq kubectl op talosctl

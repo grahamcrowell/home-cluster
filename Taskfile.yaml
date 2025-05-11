@@ -5,17 +5,23 @@ set: [pipefail]
 shopt: [globstar]
 
 vars:
-  CLUSTER_DIR: '{{.ROOT_DIR}}/k8s'
-  TALOS_DIR: '{{.ROOT_DIR}}/talos'
-  BOOTSTRAP_DIR: '{{.CLUSTER_DIR}}/bootstrap'
-  TALOSCONFIG: '{{.TALOS_DIR}}/clusterconfig/talosconfig'
+  CLUSTER_DIR: '{{ .ROOT_DIR }}/kubernetes'
+  BOOTSTRAP_DIR: '{{ .CLUSTER_DIR }}/bootstrap'
+  BOOTSTRAP_KUBERNETES_DIR: '{{ .ROOT_DIR }}/bootstrap'
+  TALOS_DIR: '{{ .ROOT_DIR }}/talos'
+  TALOSCONFIG: '{{ .TALOS_DIR }}/clusterconfig/talosconfig'
   NODE_NUMBERS: 0 1 2
   IP_PREFIX: 192.168.4.1
-  INIT_NODE_IP: '{{.IP_PREFIX}}0'
+  INIT_NODE_IP: '{{ .IP_PREFIX }}0'
+  ROOK_DISK: "Patriot P210 512"
+  OS_DISK: "NGFF 2280 512GB"
+  OP_CONNECT_SERVER: home-cluster
+  OP_CONNECT_CREDENTIALS_NAME: 'op-connect-{{ .OP_CONNECT_SERVER }}-credentials'
+  OP_CONNECT_TOKEN: 'op-connect-{{ .OP_CONNECT_SERVER }}-token'
+  OP_VAULT: cluster
 
 includes:
   bootstrap: .taskfiles/bootstrap
-  talos: .taskfiles/talos
 
 tasks:
 
