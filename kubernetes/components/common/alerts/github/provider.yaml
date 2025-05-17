@@ -5,6 +5,6 @@ metadata:
   name: github
 spec:
   type: github
-  address: https://github.com/mchestr/home-cluster
+  address: https://github.com/grahamcrowell/home-cluster
   secretRef:
     name: github-token-secret
