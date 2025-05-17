@@ -1,19 +1,9 @@
 ---
-version: '3'
+version: "3"
 
 tasks:
+  # Talos tasks
 
-  all:
-    desc: Bootstrap the cluster
-    summary: Bootstrap the cluster
-    prompt: Bootstrap the cluster?
-    cmds:
-      - task: bootstrap_cp0
-      - task: apply_config_cp1_cp2
-      - task: 1password
-      # - task: apps
-
-# Talos tasks
   cluster_status:
     desc: Cluster status
     summary: Determine status of the cluster
@@ -57,7 +47,7 @@ tasks:
       - echo "Nuking node {{ .NODE_IP }}"
       - talosctl reset --nodes {{ .NODE_IP }} --endpoints {{ .NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --debug --graceful=false
 
-  configs:
+  talos_generate_configs:
     dir: "{{.TALOS_DIR}}"
     desc: Generate configs
     prompt: (re)generate configs?
@@ -75,40 +65,43 @@ tasks:
       - test -f clusterconfig/boondoggle-cp1.yaml
       - test -f clusterconfig/boondoggle-cp2.yaml
 
-  apply_config_cp0:
+  talos_apply_config_cp0:
     dir: "{{.TALOS_DIR}}"
     desc: Apply Talos config to cp0
+    prompt: Apply Talos config to cp0?
     preconditions:
       - which talosctl
       - "curl -m 1 {{ .INIT_NODE_IP }}:50000 2>&1 | grep 'curl: (52) Empty reply from server' > /dev/null"
     status:
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
     cmds:
-      - task: apply_config
+      - task: talos_apply_config
         vars:
-          N: '0'
-      - echo "Waiting for cp0 to be ready"
+          N: "0"
       - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done
-  
-  apply_config_cp1_cp2:
+
+  talos_apply_config_cp1_cp2:
+    aliases:
+      - talos
     dir: "{{.TALOS_DIR}}"
     desc: Apply Talos config to cp1 and cp2
+    prompt: Apply Talos config to cp1 and cp2?
     vars:
       N: 1 2
     deps:
-      - bootstrap_cp0
+      - talos_bootstrap_cp0
     cmds:
       - for:
           var: N
         vars:
           N: "{{ .ITEM }}"
-        task: apply_config
+        task: talos_apply_config
       - echo "Waiting for nodes to be ready"
       # - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
     preconditions:
       - which talosctl
-  
-  apply_config:
+
+  talos_apply_config:
     internal: true
     dir: "{{ .TALOS_DIR }}"
     desc: Apply Talos config to node NODE_IP
@@ -126,18 +119,19 @@ tasks:
       - talosctl apply-config --nodes {{ .NODE_IP }} --insecure --file {{ .CONFIG_FILE }}
       - "until talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1; do sleep 5; done"
 
-  bootstrap_cp0:
+  talos_bootstrap_cp0:
     dir: "{{.TALOS_DIR}}"
     desc: Bootstrap Talos on cp0
+    prompt: Bootstrap Talos on cp0?
     status:
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'bootstrap request received' > /dev/null
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null
     deps:
-      - apply_config_cp0
+      - talos_apply_config_cp0
     cmds:
       - "until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done"
       - talosctl bootstrap --nodes {{ .INIT_NODE_IP }} --endpoints {{ .INIT_NODE_IP }} --talosconfig={{ .TALOSCONFIG }}
-      - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null; do sleep 5; done
+      - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'created /v1/Service/talos' > /dev/null; do echo "waiting for created /v1/Service/talos log"; sleep 5; done
       - talosctl kubeconfig --nodes {{ .INIT_NODE_IP }} --endpoints {{ .INIT_NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --force
     preconditions:
       - op user get --me
@@ -145,7 +139,7 @@ tasks:
       - ping -t 1 -c 1 {{ .INIT_NODE_IP }} | grep '1 packets received, 0.0% packet loss' >/dev/null
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
 
-# 1Password tasks
+  # 1Password tasks
   1password:
     desc: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN }} on server named {{ .OP_CONNECT_SERVER }}
     prompt: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN }} on server named {{ .OP_CONNECT_SERVER }}?
@@ -173,9 +167,13 @@ tasks:
       - op user get --me
       - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
 
-# Kubernetes tasks
-  apps:
+  # Kubernetes tasks
+  k8s_apps:
     desc: Bootstrap Kubernetes Apps [ROOK_DISK=required]
+    prompt: Bootstrap Kubernetes Apps [ROOK_DISK=required]?
+    deps:
+      - 1password
+      - talos_apply_config_cp1_cp2
     cmds:
       - kubectl config set-cluster {{ .CONTEXT }} --server https://{{ .RANDOM_CONTROLLER }}:6443
       - defer: talosctl kubeconfig --nodes {{ .RANDOM_CONTROLLER }} --force {{ .CLUSTER_DIR }}

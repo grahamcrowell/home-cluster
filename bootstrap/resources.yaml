@@ -13,3 +13,11 @@ metadata:
 stringData:
   1password-credentials.json: 'op://cluster/1password/OP_CREDENTIALS_JSON'
   token: op://cluster/1password/OP_CONNECT_TOKEN
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-pat
+  namespace: external-secrets
+stringData:
+  token: op://cluster/github_PAT/token
