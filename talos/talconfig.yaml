@@ -8,7 +8,7 @@ additionalMachineCertSans: []
 clusterPodNets:
   - 10.244.0.0/16
 clusterSvcNets:
-  - 10.96.0.0/12
+  - 10.245.0.0/16
 cniConfig:
   name: none
 nodes:
@@ -93,7 +93,7 @@ controlPlane:
     # # Configure containerd
     # - &containerdPatch |-
     #   machine:
-    #     files:
+    #     files: # keep
     #       - op: create
     #         path: /etc/cri/conf.d/20-customization.part
     #         content: |-
@@ -106,7 +106,7 @@ controlPlane:
     #             discard_unpacked_layers = false
     # - &sysctlPatch |-
     #   machine:
-    #     sysctls:
+    #     sysctls: # keep
     #       fs.inotify.max_user_watches: 1048576
     #       fs.inotify.max_user_instances: 8192
     #       kernel.randomize_va_space: 0
@@ -126,7 +126,7 @@ controlPlane:
     #         rotate-server-certificates: "true"
     #       extraConfig:
     #         maxPods: 150
-    #       nodeIP:
+    #       nodeIP: # keep this
     #         validSubnets:
     #             - 192.168.1.0/24
     # # Configure cluster loopback
@@ -142,7 +142,7 @@ controlPlane:
     #   cluster:
     #     etcd:
     #       advertisedSubnets:
-    #         - 192.168.1.0/24
+    #         - 192.168.1.0/24 # 192.168.4.0/24
     # # Disable default API server admission plugins.
     # - |-
     #   - op: remove
