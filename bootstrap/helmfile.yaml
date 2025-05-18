@@ -21,21 +21,6 @@ releases:
     namespace: kube-system
     values:
       - ../kubernetes/apps/kube-system/cilium/app/resources/values.yaml
-    hooks:
-      - # Error: unable to build kubernetes objects from release manifest: resource mapping not found for name: "cert-manager" namespace: "cert-manager" from "": no matches for kind "ServiceMonitor" in version "monitoring.coreos.com/v1"
-        events: ['postsync']
-        command: kubectl
-        args:
-          - apply
-          - --server-side
-          - --filename=https://raw.githubusercontent.com/prometheus-operator/prometheus-operator/main/bundle.yaml
-      - # Wait for monitoring.coreos.com/v1 ServiceMonitor CRDs to be available
-        events: ['postsync']
-        command: bash
-        args:
-          - -c
-          - until kubectl get crd alertmanagers.monitoring.coreos.com &>/dev/null; do sleep 10; done
-        showlogs: true
     version: 1.17.3
 
   - chart: coredns/coredns
@@ -45,14 +30,6 @@ releases:
       - kube-system/cilium
     values:
       - ../kubernetes/apps/kube-system/coredns/app/resources/values.yaml
-    hooks:
-      - # Apply cluster secret store configuration
-        events: ['postsync']
-        command: kubectl
-        args:
-          - apply
-          - --server-side
-          - --filename=../kubernetes/apps/external-secrets/onepassword/store/clustersecretstore.yaml
     version: 1.39.2
 
   - chart: jetstack/cert-manager

@@ -2,7 +2,7 @@ endpoints:
   - conditions:
       - len([BODY]) == 0
     dns:
-      query-name: ${GATUS_SUBDOMAIN:=${APP}}.chestr.dev
+      query-name: ${GATUS_SUBDOMAIN:=${APP}}.boondoggle.dev
       query-type: A
     group: guarded
     interval: 1m
