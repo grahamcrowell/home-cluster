@@ -220,3 +220,8 @@ tasks:
         sh: kubectl get externalsecret --all-namespaces --no-headers --output=jsonpath='{range .items[*]}{.metadata.namespace},{.metadata.name}{"\n"}{end}'
     preconditions:
       - which kubectl
+
+  reconcile:
+    desc: Force update Flux to pull in changes from your Git repository
+    cmds:
+      - flux reconcile source git flux-system {{.CLI_ARGS | default "-n flux-system"}}

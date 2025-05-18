@@ -9,6 +9,7 @@ spec:
   path: ./k8s/apps/kube-system/cilium/app
   dependsOn:
     - name: cluster-apps
+      namespace: flux-system
   sourceRef:
     kind: GitRepository
     name: flux-system
