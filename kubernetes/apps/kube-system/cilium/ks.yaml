@@ -30,7 +30,7 @@ spec:
 #   namespace: flux-system
 # spec:
 #   targetNamespace: kube-system
-#   path: ./k8s/apps/kube-system/cilium/bgp
+#   path: ./kubernetes/apps/kube-system/cilium/bgp
 #   dependsOn:
 #     - name: cilium
 #   sourceRef:

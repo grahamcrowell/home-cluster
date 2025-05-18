@@ -14,7 +14,7 @@ spec:
       app.kubernetes.io/name: *appname
   interval: 30m
   timeout: 5m
-  path: ./k8s/apps/kube-system/coredns/app
+  path: ./kubernetes/apps/kube-system/coredns/app
   prune: false # Never delete this
   sourceRef:
     kind: GitRepository
