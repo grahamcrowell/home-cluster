@@ -4,7 +4,7 @@ talosVersion: v1.9.2
 kubernetesVersion: v1.32.0
 endpoint: https://192.168.4.10:6443
 allowSchedulingOnMasters: true
-additionalMachineCertSans: []
+additionalMachineCertSans: ["127.0.0.1"]
 clusterPodNets:
   - 10.244.0.0/16
 clusterSvcNets:
@@ -117,32 +117,32 @@ controlPlane:
           net.ipv4.tcp_wmem: 4096 65536 33554432
           net.ipv4.tcp_tw_reuse: 1
           net.ipv4.tcp_window_scaling: 1
-    # Kubelet configuration
-    - &kubeletPatch |-
-      machine:
-        kubelet:
-          extraArgs:
-            feature-gates: GracefulNodeShutdown=true
-            rotate-server-certificates: "true"
-          extraConfig:
-            maxPods: 150
-          nodeIP: # keep this
-            validSubnets:
-                - 192.168.4.0/24
-    # Configure cluster loopback
-    - |-
-      machine:
-        network:
-          extraHostEntries:
-            - ip: 192.168.4.10
-              aliases:
-                - boondoggle.boondoggle.dev
+    # # Kubelet configuration
+    # - &kubeletPatch |-
+    #   machine:
+    #     kubelet:
+    #       extraArgs:
+    #         feature-gates: GracefulNodeShutdown=true
+    #         rotate-server-certificates: "true"
+    #       extraConfig:
+    #         maxPods: 150
+    #       nodeIP: # keep this
+    #         validSubnets:
+    #             - 192.168.4.0/24
+    # # Configure cluster loopback
+    # - |-
+    #   machine:
+    #     network:
+    #       extraHostEntries:
+    #         - ip: 192.168.4.10
+    #           aliases:
+    #             - boondoggle.boondoggle.dev
     # ETCD configuration
-    - |-
-      cluster:
-        etcd:
-          advertisedSubnets:
-            - 192.168.4.0/24
+    # - |-
+    #   cluster:
+    #     etcd:
+    #       advertisedSubnets:
+    #         - 192.168.4.0/24
     # Disable default API server admission plugins.
     - |-
       - op: remove
