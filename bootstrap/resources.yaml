@@ -21,3 +21,11 @@ metadata:
   namespace: external-secrets
 stringData:
   token: op://cluster/github_PAT/token
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-pat
+  namespace: flux-system
+stringData:
+  token: op://cluster/github_PAT/token
