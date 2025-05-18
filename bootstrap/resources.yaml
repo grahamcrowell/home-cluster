@@ -21,3 +21,10 @@ metadata:
   namespace: external-secrets
 stringData:
   token: op://cluster/github_PAT/token
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cluster-secrets
+  namespace: external-secrets
+stringData: {}
