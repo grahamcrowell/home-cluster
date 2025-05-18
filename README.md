@@ -62,7 +62,7 @@ op inject -i talos/talosecret.op.yaml -o talos/talosecret.yaml
 5. `taloctl apply-configs`
 
 ```
-export GITHUB_TOKEN=$(op read "op://cluster/home-cluster/PERSONAL_ACCESS_TOKEN")
+export GITHUB_TOKEN=$(op read "op://Kubernetes/home-cluster/PERSONAL_ACCESS_TOKEN")
 export GITHUB_USER=grahamcrowell
 flux bootstrap github \
   --token-auth \

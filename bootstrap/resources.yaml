@@ -11,8 +11,8 @@ metadata:
   name: onepassword-secret
   namespace: external-secrets
 stringData:
-  1password-credentials.json: op://cluster/1password/OP_CREDENTIALS_JSON
-  token: op://cluster/1password/OP_CONNECT_TOKEN
+  1password-credentials.json: op://Kubernetes/1password/OP_CREDENTIALS_JSON
+  token: op://Kubernetes/1password/OP_CONNECT_TOKEN
 ---
 apiVersion: v1
 kind: Secret
@@ -20,7 +20,7 @@ metadata:
   name: github-pat
   namespace: external-secrets
 stringData:
-  token: op://cluster/github_PAT/token
+  token: op://Kubernetes/github_PAT/token
 ---
 apiVersion: v1
 kind: Secret

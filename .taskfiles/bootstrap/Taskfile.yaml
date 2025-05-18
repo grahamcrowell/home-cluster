@@ -88,8 +88,8 @@ tasks:
     prompt: Apply Talos config to cp1 and cp2?
     vars:
       N: 1 2
-    deps:
-      - talos_bootstrap_cp0
+    # deps:
+      # - talos_bootstrap_cp0
     cmds:
       - for:
           var: N
@@ -173,7 +173,7 @@ tasks:
     prompt: Bootstrap Kubernetes Apps [ROOK_DISK=required]?
     deps:
       - 1password
-      - talos_apply_config_cp1_cp2
+      # - talos_apply_config_cp1_cp2
     cmds:
       - kubectl config set-cluster {{ .CONTEXT }} --server https://{{ .RANDOM_CONTROLLER }}:6443
       - defer: talosctl kubeconfig --nodes {{ .RANDOM_CONTROLLER }} --force {{ .CLUSTER_DIR }}

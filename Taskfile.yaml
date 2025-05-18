@@ -18,7 +18,7 @@ vars:
   OP_CONNECT_SERVER: home-cluster
   OP_CONNECT_CREDENTIALS_NAME: 'op-connect-{{ .OP_CONNECT_SERVER }}-credentials'
   OP_CONNECT_TOKEN: 'op-connect-{{ .OP_CONNECT_SERVER }}-token'
-  OP_VAULT: cluster
+  OP_VAULT: Kubernetes
 
 includes:
   bootstrap: .taskfiles/bootstrap

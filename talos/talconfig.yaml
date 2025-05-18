@@ -134,9 +134,9 @@ controlPlane:
       machine:
         network:
           extraHostEntries:
-            - ip: ${clusterEndpointIP}
+            - ip: 192.168.4.10
               aliases:
-                - ${clusterName}.boondoggle.dev
+                - boondoggle.boondoggle.dev
     # ETCD configuration
     - |-
       cluster:
