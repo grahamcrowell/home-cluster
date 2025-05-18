@@ -6,16 +6,32 @@ metadata:
   name: coredns
   namespace: flux-system
 spec:
-  chart:
-    spec:
-      chart: coredns
-      version: 1.38.1
-      sourceRef:
-        kind: HelmRepository
-        name: coredns
-        namespace: flux-system
+  chartRef:
+    kind: OCIRepository
+    name: coredns
+    namespace: kube-system
   interval: 30m
-
+  install:
+    remediation:
+      retries: -1
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
   valuesFrom:
     - kind: ConfigMap
       name: coredns-values
+---
+# yaml-language-server: $schema=https://kubernetes-schemas.pages.dev/source.toolkit.fluxcd.io/ocirepository_v1beta2.json
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: OCIRepository
+metadata:
+  name: coredns
+spec:
+  interval: 1h
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  url: oci://ghcr.io/coredns/charts/coredns
+  ref:
+    tag: 1.39.2
