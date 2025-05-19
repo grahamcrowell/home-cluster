@@ -93,7 +93,7 @@ controlPlane:
     # Configure containerd
     - &containerdPatch |-
       machine:
-        files: # keep
+        files:
           - op: create
             path: /etc/cri/conf.d/20-customization.part
             content: |-
@@ -106,7 +106,7 @@ controlPlane:
                 discard_unpacked_layers = false
     - &sysctlPatch |-
       machine:
-        sysctls: # keep
+        sysctls:
           fs.inotify.max_user_watches: 1048576
           fs.inotify.max_user_instances: 8192
           kernel.randomize_va_space: 0
