@@ -8,3 +8,4 @@ spec:
   address: https://github.com/grahamcrowell/home-cluster
   secretRef:
     name: github-pat
+    namespace: external-secrets
