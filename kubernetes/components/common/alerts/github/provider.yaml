@@ -7,5 +7,4 @@ spec:
   type: github
   address: https://github.com/grahamcrowell/home-cluster
   secretRef:
-    name: github-pat
-    namespace: external-secrets
+    name: github-token-secret
