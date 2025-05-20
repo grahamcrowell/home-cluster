@@ -117,7 +117,7 @@ tasks:
     cmds:
       - echo "Applying Talos config to node {{ .N }}"
       - talosctl apply-config --nodes {{ .NODE_IP }} --insecure --file {{ .CONFIG_FILE }}
-      - "until talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1; do sleep 5; done"
+      - until talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1; do echo "waiting for node {{ .NODE_IP }}"; sleep 5; done
 
   talos_bootstrap_cp0:
     dir: "{{.TALOS_DIR}}"
