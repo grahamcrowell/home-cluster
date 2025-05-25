@@ -1,0 +1,266 @@
+Name:               cp0
+Roles:              control-plane
+Labels:             beta.kubernetes.io/arch=amd64
+                    beta.kubernetes.io/os=linux
+                    kubernetes.io/arch=amd64
+                    kubernetes.io/hostname=cp0
+                    kubernetes.io/os=linux
+                    node-role.kubernetes.io/control-plane=
+                    node.kubernetes.io/exclude-from-external-load-balancers=
+Annotations:        csi.volume.kubernetes.io/nodeid: {"rook-ceph.cephfs.csi.ceph.com":"cp0","rook-ceph.rbd.csi.ceph.com":"cp0"}
+                    node.alpha.kubernetes.io/ttl: 0
+                    talos.dev/owned-labels: ["node-role.kubernetes.io/control-plane","node.kubernetes.io/exclude-from-external-load-balancers"]
+                    volumes.kubernetes.io/controller-managed-attach-detach: true
+CreationTimestamp:  Mon, 19 May 2025 20:17:08 -0700
+Taints:             <none>
+Unschedulable:      false
+Lease:
+  HolderIdentity:  cp0
+  AcquireTime:     <unset>
+  RenewTime:       Sun, 25 May 2025 11:13:33 -0700
+Conditions:
+  Type                 Status  LastHeartbeatTime                 LastTransitionTime                Reason                       Message
+  ----                 ------  -----------------                 ------------------                ------                       -------
+  NetworkUnavailable   False   Tue, 20 May 2025 21:33:44 -0700   Tue, 20 May 2025 21:33:44 -0700   CiliumIsUp                   Cilium is running on this node
+  MemoryPressure       False   Sun, 25 May 2025 11:09:15 -0700   Mon, 19 May 2025 20:17:08 -0700   KubeletHasSufficientMemory   kubelet has sufficient memory available
+  DiskPressure         False   Sun, 25 May 2025 11:09:15 -0700   Mon, 19 May 2025 20:17:08 -0700   KubeletHasNoDiskPressure     kubelet has no disk pressure
+  PIDPressure          False   Sun, 25 May 2025 11:09:15 -0700   Mon, 19 May 2025 20:17:08 -0700   KubeletHasSufficientPID      kubelet has sufficient PID available
+  Ready                True    Sun, 25 May 2025 11:09:15 -0700   Tue, 20 May 2025 21:33:45 -0700   KubeletReady                 kubelet is posting ready status
+Addresses:
+  InternalIP:  192.168.4.10
+  Hostname:    cp0
+Capacity:
+  cpu:                4
+  ephemeral-storage:  498631804Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             16127868Ki
+  pods:               110
+Allocatable:
+  cpu:                3950m
+  ephemeral-storage:  459270634350
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             15501180Ki
+  pods:               110
+System Info:
+  Machine ID:                 1855691f1673f44fcd155feec8bc6700
+  System UUID:                03000200-0400-0500-0006-000700080009
+  Boot ID:                    2401081d-7265-4c10-9f99-e612a1c7eb62
+  Kernel Version:             6.12.9-talos
+  OS Image:                   Talos (v1.9.2)
+  Operating System:           linux
+  Architecture:               amd64
+  Container Runtime Version:  containerd://2.0.2
+  Kubelet Version:            v1.32.0
+  Kube-Proxy Version:         v1.32.0
+PodCIDR:                      10.244.0.0/24
+PodCIDRs:                     10.244.0.0/24
+Non-terminated Pods:          (18 in total)
+  Namespace                   Name                                                 CPU Requests  CPU Limits  Memory Requests  Memory Limits  Age
+  ---------                   ----                                                 ------------  ----------  ---------------  -------------  ---
+  cert-manager                cert-manager-58cbf7f6d4-jv7q4                        0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  default                     dnsutils                                             0 (0%)        0 (0%)      0 (0%)           0 (0%)         21h
+  external-secrets            external-secrets-cert-controller-69bcc5d888-zgvdh    0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  flux-system                 helm-controller-694dc5864b-6gmwp                     100m (2%)     1 (25%)     64Mi (0%)        2Gi (13%)      45m
+  kube-system                 cilium-sv49c                                         100m (2%)     0 (0%)      10Mi (0%)        0 (0%)         4d13h
+  kube-system                 kube-apiserver-cp0                                   200m (5%)     0 (0%)      512Mi (3%)       0 (0%)         2d11h
+  kube-system                 kube-controller-manager-cp0                          50m (1%)      0 (0%)      256Mi (1%)       0 (0%)         14h
+  kube-system                 kube-scheduler-cp0                                   10m (0%)      0 (0%)      64Mi (0%)        0 (0%)         5d14h
+  kube-system                 spegel-bc7ck                                         0 (0%)        0 (0%)      128Mi (0%)       128Mi (0%)     14h
+  kyverno                     kyverno-background-controller-698987c74f-kssxm       50m (1%)      0 (0%)      128Mi (0%)       192Mi (1%)     45m
+  rook-ceph                   csi-cephfsplugin-8d556                               350m (8%)     0 (0%)      768Mi (5%)       1536Mi (10%)   15h
+  rook-ceph                   csi-rbdplugin-k7h9h                                  350m (8%)     0 (0%)      768Mi (5%)       1536Mi (10%)   14h
+  rook-ceph                   csi-rbdplugin-provisioner-5c874c795d-xqzpl           450m (11%)    0 (0%)      1152Mi (7%)      2304Mi (15%)   45m
+  rook-ceph                   rook-ceph-exporter-cp0-77878b56db-g6kqm              50m (1%)      0 (0%)      50Mi (0%)        128Mi (0%)     14h
+  rook-ceph                   rook-ceph-mon-a-5698886548-86g94                     1100m (27%)   0 (0%)      1124Mi (7%)      3Gi (20%)      14h
+  rook-ceph                   rook-ceph-osd-0-757656959-p7ztk                      1100m (27%)   0 (0%)      4196Mi (27%)     5Gi (33%)      43m
+  rook-ceph                   rook-discover-8qhrf                                  0 (0%)        0 (0%)      0 (0%)           0 (0%)         14h
+  volsync-system              snapshot-controller-57cd8b8986-s7k6c                 0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests      Limits
+  --------           --------      ------
+  cpu                3910m (98%)   1 (25%)
+  memory             9220Mi (60%)  16064Mi (106%)
+  ephemeral-storage  0 (0%)        0 (0%)
+  hugepages-1Gi      0 (0%)        0 (0%)
+  hugepages-2Mi      0 (0%)        0 (0%)
+Events:              <none>
+
+
+Name:               cp1
+Roles:              control-plane
+Labels:             beta.kubernetes.io/arch=amd64
+                    beta.kubernetes.io/os=linux
+                    kubernetes.io/arch=amd64
+                    kubernetes.io/hostname=cp1
+                    kubernetes.io/os=linux
+                    node-role.kubernetes.io/control-plane=
+                    node.kubernetes.io/exclude-from-external-load-balancers=
+Annotations:        csi.volume.kubernetes.io/nodeid: {"rook-ceph.cephfs.csi.ceph.com":"cp1","rook-ceph.rbd.csi.ceph.com":"cp1"}
+                    node.alpha.kubernetes.io/ttl: 0
+                    talos.dev/owned-labels: ["node-role.kubernetes.io/control-plane","node.kubernetes.io/exclude-from-external-load-balancers"]
+                    volumes.kubernetes.io/controller-managed-attach-detach: true
+CreationTimestamp:  Mon, 19 May 2025 20:18:18 -0700
+Taints:             <none>
+Unschedulable:      false
+Lease:
+  HolderIdentity:  cp1
+  AcquireTime:     <unset>
+  RenewTime:       Sun, 25 May 2025 11:13:31 -0700
+Conditions:
+  Type                 Status  LastHeartbeatTime                 LastTransitionTime                Reason                       Message
+  ----                 ------  -----------------                 ------------------                ------                       -------
+  NetworkUnavailable   False   Tue, 20 May 2025 21:33:42 -0700   Tue, 20 May 2025 21:33:42 -0700   CiliumIsUp                   Cilium is running on this node
+  MemoryPressure       False   Sun, 25 May 2025 11:12:07 -0700   Mon, 19 May 2025 20:18:18 -0700   KubeletHasSufficientMemory   kubelet has sufficient memory available
+  DiskPressure         False   Sun, 25 May 2025 11:12:07 -0700   Mon, 19 May 2025 20:18:18 -0700   KubeletHasNoDiskPressure     kubelet has no disk pressure
+  PIDPressure          False   Sun, 25 May 2025 11:12:07 -0700   Mon, 19 May 2025 20:18:18 -0700   KubeletHasSufficientPID      kubelet has sufficient PID available
+  Ready                True    Sun, 25 May 2025 11:12:07 -0700   Tue, 20 May 2025 21:33:49 -0700   KubeletReady                 kubelet is posting ready status
+Addresses:
+  InternalIP:  192.168.4.11
+  Hostname:    cp1
+Capacity:
+  cpu:                4
+  ephemeral-storage:  498631804Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             16126352Ki
+  pods:               110
+Allocatable:
+  cpu:                3950m
+  ephemeral-storage:  459270634350
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             15499664Ki
+  pods:               110
+System Info:
+  Machine ID:                 190a5787f90a58d5c6331da251166c90
+  System UUID:                03000200-0400-0500-0006-000700080009
+  Boot ID:                    229f68cd-e4b9-4c05-8a40-aeb7c8d49d6e
+  Kernel Version:             6.12.9-talos
+  OS Image:                   Talos (v1.9.2)
+  Operating System:           linux
+  Architecture:               amd64
+  Container Runtime Version:  containerd://2.0.2
+  Kubelet Version:            v1.32.0
+  Kube-Proxy Version:         v1.32.0
+PodCIDR:                      10.244.1.0/24
+PodCIDRs:                     10.244.1.0/24
+Non-terminated Pods:          (14 in total)
+  Namespace                   Name                                        CPU Requests  CPU Limits  Memory Requests  Memory Limits  Age
+  ---------                   ----                                        ------------  ----------  ---------------  -------------  ---
+  cert-manager                cert-manager-cainjector-5dfc78fdc9-fpq6r    0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  cert-manager                cert-manager-webhook-68f5c977fd-74m8z       0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  external-secrets            external-secrets-webhook-5867f659b-jszbl    0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  kube-system                 cilium-stv8s                                100m (2%)     0 (0%)      10Mi (0%)        0 (0%)         4d13h
+  kube-system                 kube-apiserver-cp1                          200m (5%)     0 (0%)      512Mi (3%)       0 (0%)         5d14h
+  kube-system                 kube-controller-manager-cp1                 50m (1%)      0 (0%)      256Mi (1%)       0 (0%)         45m
+  kube-system                 kube-scheduler-cp1                          10m (0%)      0 (0%)      64Mi (0%)        0 (0%)         10s
+  kube-system                 spegel-7q2xx                                0 (0%)        0 (0%)      128Mi (0%)       128Mi (0%)     4d13h
+  rook-ceph                   csi-cephfsplugin-69g6r                      350m (8%)     0 (0%)      768Mi (5%)       1536Mi (10%)   15h
+  rook-ceph                   csi-rbdplugin-5nmbb                         350m (8%)     0 (0%)      768Mi (5%)       1536Mi (10%)   15h
+  rook-ceph                   rook-ceph-mgr-b-84ff89df9b-44n5w            700m (17%)    0 (0%)      652Mi (4%)       2148Mi (14%)   2d20h
+  rook-ceph                   rook-ceph-mon-b-55d4f7b546-499z9            1100m (27%)   0 (0%)      1124Mi (7%)      3Gi (20%)      4d13h
+  rook-ceph                   rook-discover-ff2lr                         0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  volsync-system              snapshot-controller-57cd8b8986-mwt2q        0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests      Limits
+  --------           --------      ------
+  cpu                2860m (72%)   0 (0%)
+  memory             4282Mi (28%)  8420Mi (55%)
+  ephemeral-storage  0 (0%)        0 (0%)
+  hugepages-1Gi      0 (0%)        0 (0%)
+  hugepages-2Mi      0 (0%)        0 (0%)
+Events:              <none>
+
+
+Name:               cp2
+Roles:              control-plane
+Labels:             beta.kubernetes.io/arch=amd64
+                    beta.kubernetes.io/os=linux
+                    kubernetes.io/arch=amd64
+                    kubernetes.io/hostname=cp2
+                    kubernetes.io/os=linux
+                    node-role.kubernetes.io/control-plane=
+                    node.kubernetes.io/exclude-from-external-load-balancers=
+Annotations:        csi.volume.kubernetes.io/nodeid: {"rook-ceph.cephfs.csi.ceph.com":"cp2","rook-ceph.rbd.csi.ceph.com":"cp2"}
+                    node.alpha.kubernetes.io/ttl: 0
+                    talos.dev/owned-labels: ["node-role.kubernetes.io/control-plane","node.kubernetes.io/exclude-from-external-load-balancers"]
+                    volumes.kubernetes.io/controller-managed-attach-detach: true
+CreationTimestamp:  Mon, 19 May 2025 20:18:55 -0700
+Taints:             <none>
+Unschedulable:      false
+Lease:
+  HolderIdentity:  cp2
+  AcquireTime:     <unset>
+  RenewTime:       Sun, 25 May 2025 11:13:31 -0700
+Conditions:
+  Type                 Status  LastHeartbeatTime                 LastTransitionTime                Reason                       Message
+  ----                 ------  -----------------                 ------------------                ------                       -------
+  NetworkUnavailable   False   Tue, 20 May 2025 21:33:42 -0700   Tue, 20 May 2025 21:33:42 -0700   CiliumIsUp                   Cilium is running on this node
+  MemoryPressure       False   Sun, 25 May 2025 11:12:02 -0700   Mon, 19 May 2025 20:18:55 -0700   KubeletHasSufficientMemory   kubelet has sufficient memory available
+  DiskPressure         False   Sun, 25 May 2025 11:12:02 -0700   Mon, 19 May 2025 20:18:55 -0700   KubeletHasNoDiskPressure     kubelet has no disk pressure
+  PIDPressure          False   Sun, 25 May 2025 11:12:02 -0700   Mon, 19 May 2025 20:18:55 -0700   KubeletHasSufficientPID      kubelet has sufficient PID available
+  Ready                True    Sun, 25 May 2025 11:12:02 -0700   Tue, 20 May 2025 21:33:41 -0700   KubeletReady                 kubelet is posting ready status
+Addresses:
+  InternalIP:  192.168.4.12
+  Hostname:    cp2
+Capacity:
+  cpu:                4
+  ephemeral-storage:  498631804Ki
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             16126344Ki
+  pods:               110
+Allocatable:
+  cpu:                3950m
+  ephemeral-storage:  459270634350
+  hugepages-1Gi:      0
+  hugepages-2Mi:      0
+  memory:             15499656Ki
+  pods:               110
+System Info:
+  Machine ID:                 04f35c488a12d9f2b8db73cd9aba0f25
+  System UUID:                03000200-0400-0500-0006-000700080009
+  Boot ID:                    b3e0e950-e8bd-42c2-b6ff-522e8df64610
+  Kernel Version:             6.12.9-talos
+  OS Image:                   Talos (v1.9.2)
+  Operating System:           linux
+  Architecture:               amd64
+  Container Runtime Version:  containerd://2.0.2
+  Kubelet Version:            v1.32.0
+  Kube-Proxy Version:         v1.32.0
+PodCIDR:                      10.244.2.0/24
+PodCIDRs:                     10.244.2.0/24
+Non-terminated Pods:          (17 in total)
+  Namespace                   Name                                          CPU Requests  CPU Limits  Memory Requests  Memory Limits  Age
+  ---------                   ----                                          ------------  ----------  ---------------  -------------  ---
+  external-secrets            external-secrets-7c86595867-mpcbv             0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  external-secrets            onepassword-69bf5f44f5-dmfk8                  5m (0%)       0 (0%)      10Mi (0%)        100Mi (0%)     14h
+  flux-system                 kustomize-controller-76d97c495c-mlt7k         100m (2%)     1 (25%)     64Mi (0%)        2Gi (13%)      2d11h
+  flux-system                 source-controller-7db995f85-df5pl             50m (1%)      1 (25%)     64Mi (0%)        2Gi (13%)      4d11h
+  kube-system                 cilium-g4p67                                  100m (2%)     0 (0%)      10Mi (0%)        0 (0%)         4d13h
+  kube-system                 cilium-operator-85c86d6cf8-nmhbp              0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+  kube-system                 kube-apiserver-cp2                            200m (5%)     0 (0%)      512Mi (3%)       0 (0%)         5d14h
+  kube-system                 kube-controller-manager-cp2                   50m (1%)      0 (0%)      256Mi (1%)       0 (0%)         5d14h
+  kube-system                 kube-scheduler-cp2                            10m (0%)      0 (0%)      64Mi (0%)        0 (0%)         5d14h
+  kube-system                 spegel-rvmc9                                  0 (0%)        0 (0%)      128Mi (0%)       128Mi (0%)     4d13h
+  rook-ceph                   csi-cephfsplugin-mrgpw                        350m (8%)     0 (0%)      768Mi (5%)       1536Mi (10%)   15h
+  rook-ceph                   csi-rbdplugin-lc6jw                           350m (8%)     0 (0%)      768Mi (5%)       1536Mi (10%)   15h
+  rook-ceph                   csi-rbdplugin-provisioner-5c874c795d-jdvfp    450m (11%)    0 (0%)      1152Mi (7%)      2304Mi (15%)   14h
+  rook-ceph                   rook-ceph-exporter-cp2-7df655c44d-rvj5h       50m (1%)      0 (0%)      50Mi (0%)        128Mi (0%)     14h
+  rook-ceph                   rook-ceph-mon-c-7577f64584-wk2lt              1100m (27%)   0 (0%)      1124Mi (7%)      3Gi (20%)      4d13h
+  rook-ceph                   rook-ceph-osd-1-6cdf85b45-5dqzm               1100m (27%)   0 (0%)      4196Mi (27%)     5Gi (33%)      43m
+  rook-ceph                   rook-discover-jpvqg                           0 (0%)        0 (0%)      0 (0%)           0 (0%)         4d13h
+Allocated resources:
+  (Total limits may be over 100 percent, i.e., overcommitted.)
+  Resource           Requests      Limits
+  --------           --------      ------
+  cpu                3915m (99%)   2 (50%)
+  memory             9166Mi (60%)  18020Mi (119%)
+  ephemeral-storage  0 (0%)        0 (0%)
+  hugepages-1Gi      0 (0%)        0 (0%)
+  hugepages-2Mi      0 (0%)        0 (0%)
+Events:              <none>

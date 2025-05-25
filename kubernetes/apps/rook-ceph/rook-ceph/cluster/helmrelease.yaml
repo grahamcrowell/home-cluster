@@ -66,8 +66,10 @@ spec:
             memory: "500Mi"
         osd:
           limits:
-            memory: "4Gi"
+            cpu: "500m"
+            memory: "2Gi"
           requests:
+            cpu: "500m"
             memory: "2Gi"
         prepareosd:
           limits:
