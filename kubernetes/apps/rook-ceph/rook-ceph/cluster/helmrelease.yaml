@@ -17,6 +17,7 @@ spec:
     remediation:
       retries: 3
   values:
+  
     monitoring:
       enabled: true
       createPrometheusRules: true
@@ -50,6 +51,55 @@ spec:
         provider: host
         connections:
           requireMsgr2: true
+      resources:
+        mgr:
+          limits:
+            memory: "1Gi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        mon:
+          limits:
+            memory: "2Gi"
+          requests:
+            cpu: "100m"
+            memory: "500Mi"
+        osd:
+          limits:
+            memory: "4Gi"
+          requests:
+            memory: "2Gi"
+        prepareosd:
+          limits:
+            memory: "900Mi"
+          requests:
+            cpu: "100m"
+            memory: "50Mi"
+        mgr-sidecar:
+          limits:
+            memory: "100Mi"
+          requests:
+            cpu: "100m"
+            memory: "40Mi"
+        crashcollector:
+          limits:
+            memory: "60Mi"
+          requests:
+            cpu: "100m"
+            memory: "60Mi"
+        logcollector:
+          limits:
+            memory: "1Gi"
+          requests:
+            cpu: "100m"
+            memory: "100Mi"
+        cleanup:
+          limits:
+            memory: "1Gi"
+          requests:
+            cpu: "100m"
+            memory: "100Mi"
+
       storage:
         useAllNodes: true
         useAllDevices: false

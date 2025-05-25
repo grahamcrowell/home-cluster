@@ -14,6 +14,7 @@
 -   op `brew install --cask 1password-cli`
 -   helmfile `brew install helmfile`
 -   helm diff `helm plugin install https://github.com/databus23/helm-diff`
+-   kyverno`brew install kyverno`
 
 ### not (yet) used
 
