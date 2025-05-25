@@ -179,6 +179,7 @@ tasks:
       - defer: talosctl kubeconfig --nodes {{ .RANDOM_CONTROLLER }} --force {{ .CLUSTER_DIR }}
       - echo {{ .ROOK_DISK }}
       - echo {{ .BLOCK_DEVICES_RESPONSE }}
+      - echo {{ .BLOCK_DEVICES }}
       - for: { var: BLOCK_DEVICES }
         cmd: |
           echo "Wiping disk {{ .ITEM }} on {{ .KEY }}"
