@@ -75,6 +75,7 @@ function cluster_status() {
     return 1
 }
 
+
 function main() {
     set -e
     CP0_IP="192.168.4.10"
@@ -85,12 +86,13 @@ function main() {
     node_ping $INIT_NODE_IP
     config_applied $INIT_NODE_IP
     bootstrap_sent $INIT_NODE_IP
-    cilium_status
     node_ping $CP1_IP
     node_ping $CP2_IP
     config_applied $CP1_IP
     config_applied $CP2_IP
     cluster_status
+
+    cilium_status
 
     flux check --pre
     flux check

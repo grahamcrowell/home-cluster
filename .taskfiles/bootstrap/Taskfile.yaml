@@ -15,6 +15,11 @@ tasks:
           NODE: "cp{{ .ITEM }}"
           NODE_IP: "192.168.4.1{{ .ITEM }}"
         task: node_check
+      - kubectl get nodes
+      - kubectl get pods --all-namespaces
+      - kubectl get services --all-namespaces
+      - kubectl get secrets --all-namespaces
+      - kubectl -n rook-ceph describe cephcluster
 
   node_check:
     desc: Node status
