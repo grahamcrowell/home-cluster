@@ -1,0 +1,30 @@
+---
+version: "3"
+
+tasks:
+  # Talos tasks
+  rook_ceph_dashboard:
+    desc: "Open Rook Ceph Dashboard"
+    cmds:
+      - |
+        echo "username: admin";
+        printf "password: %s\n" $(kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode)
+        kubectl -n rook-ceph get secret rook-ceph-dashboard-password -o jsonpath="{['data']['password']}" | base64 --decode | pbcopy
+        echo "password copied to clipboard";
+        kubectl --namespace rook-ceph port-forward services/rook-ceph-mgr-dashboard 7000:7000 || {
+          echo "Failed to port-forward Rook Ceph Dashboard. Ensure the Rook Ceph operator is running and the service is available.";
+        }
+        open http://localhost:7000;
+
+  nslookup:
+    desc: "Perform a DNS lookup for a given hostname"
+    vars:
+      HOSTNAME: "kubernetes.default"
+    cmds:
+      - |
+        kubectl get pods --namespace=kube-system -l k8s-app=kube-dns
+        kubectl logs --namespace=kube-system -l k8s-app=kube-dns
+        kubectl apply -f https://k8s.io/examples/admin/dns/dnsutils.yaml
+        kubectl exec -it dnsutils -- nslookup {{.HOSTNAME}} || {
+          echo "Failed to perform DNS lookup for {{.HOSTNAME}}. Ensure the dnsutils pod is running.";
+        }

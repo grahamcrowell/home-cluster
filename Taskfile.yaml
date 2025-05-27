@@ -22,6 +22,7 @@ vars:
 
 includes:
   bootstrap: .taskfiles/bootstrap
+  kubernetes: .taskfiles/kubernetes
 
 tasks:
 
