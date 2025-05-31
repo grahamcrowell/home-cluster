@@ -25,9 +25,9 @@
 -   zero rook drives (takes > 6hrs)
 
 ```bash
-talosctl --nodes cp0 wipe disk sdc --method ZEROES
-talosctl --nodes cp1 wipe disk sdc --method ZEROES
-talosctl --nodes cp2 wipe disk sdc --method ZEROES
+talosctl --nodes cp0 wipe disk sdc --method ZEROES &
+talosctl --nodes cp1 wipe disk sdc --method ZEROES &
+talosctl --nodes cp2 wipe disk sdc --method ZEROES &
 ```
 
 ### Bootstrap
@@ -37,3 +37,20 @@ talosctl --nodes cp2 wipe disk sdc --method ZEROES
 1. `task bootstrap:bootstrap:talos_bootstrap_cp0`
 1. `task bootstrap:talos_apply_config_cp1_cp2`
 1. `task bootstrap:k8s_apps`
+
+### Hardware Requirements
+
+-   [Video file size calculator](https://snxpstudio.co/resources/video-file-size-calculator/)
+
+```
+1000 movies + 200 series
+
+800 movies + 100 series @ 4K
+200 movies + 100 series @ 1080p
+
+1 series = 5 season * 15 episodes * 45 mins ~ 4000 mins
+1 movie = 120 mins
+
+800 * 120 + 4_000 * 100 = 496_000
+200 * 120 + 4_000 * 100
+```

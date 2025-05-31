@@ -37,17 +37,18 @@ tasks:
   nuke_and_pave:
     desc: Nuke all nodes
     summary: Reset and wipe all nodes on the cluster
-    prompt: Nuke and pave?
-    cmds:
-      - for:
-          var: NODE_NUMBERS
-        vars:
-          NODE_IP: "192.168.4.1{{ .ITEM }}"
-        task: nuke_node
-  nuke_node:
+    deps:
+      - nuke_node:0
+      - nuke_node:1
+      - nuke_node:2
+  
+  nuke_node:*:
     internal: true
     desc: Nuke node
     ignore_error: true
+    vars:
+      N: "{{index .MATCH 0}}"
+      NODE_IP: "192.168.4.1{{ .N }}"
     cmds:
       - echo "Nuking node {{ .NODE_IP }}"
       - talosctl reset --nodes {{ .NODE_IP }} --endpoints {{ .NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --debug --graceful=false
@@ -80,9 +81,7 @@ tasks:
     status:
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
     cmds:
-      - task: talos_apply_config
-        vars:
-          N: "0"
+      - task: talos_apply_config:0
       - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done
 
   talos_apply_config_cp1_cp2:
@@ -91,23 +90,13 @@ tasks:
     dir: "{{.TALOS_DIR}}"
     desc: Apply Talos config to cp1 and cp2
     prompt: Apply Talos config to cp1 and cp2?
-    vars:
-      N: 1 2
-    # deps:
-      # - talos_bootstrap_cp0
-    cmds:
-      - for:
-          var: N
-        vars:
-          N: "{{ .ITEM }}"
-        task: talos_apply_config
-      - echo "Waiting for nodes to be ready"
-      # - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
+    deps:
+      - talos_apply_config:1
+      - talos_apply_config:2
     preconditions:
       - which talosctl
 
-  talos_apply_config:
-    internal: true
+  talos_apply_config:*:
     dir: "{{ .TALOS_DIR }}"
     desc: Apply Talos config to node NODE_IP
     preconditions:
@@ -117,6 +106,7 @@ tasks:
     status:
       - talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "talos config has been applied to {{ .NODE_IP }}"
     vars:
+      N: "{{index .MATCH 0}}"
       NODE_IP: "192.168.4.1{{ .N }}"
       CONFIG_FILE: clusterconfig/boondoggle-cp{{ .N }}.yaml
     cmds:
@@ -216,18 +206,5 @@ tasks:
       - which helmfile jq kubectl op talosctl
 
 
-  sync-secrets:
-    desc: Sync all ExternalSecrets
-    cmds:
-      - for: { var: SECRETS, split: "\n" }
-        cmd: kubectl --namespace {{splitList "," .ITEM | first}} annotate externalsecret {{splitList "," .ITEM | last}} force-sync="{{now | unixEpoch}}" --overwrite
-    vars:
-      SECRETS:
-        sh: kubectl get externalsecret --all-namespaces --no-headers --output=jsonpath='{range .items[*]}{.metadata.namespace},{.metadata.name}{"\n"}{end}'
-    preconditions:
-      - which kubectl
 
-  reconcile:
-    desc: Force update Flux to pull in changes from your Git repository
-    cmds:
-      - flux reconcile source git flux-system {{.CLI_ARGS | default "-n flux-system"}}
+

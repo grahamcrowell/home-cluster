@@ -2,7 +2,6 @@
 version: "3"
 
 tasks:
-  # Talos tasks
   rook_ceph_dashboard:
     desc: "Open Rook Ceph Dashboard"
     cmds:
@@ -28,3 +27,8 @@ tasks:
         kubectl exec -it dnsutils -- nslookup {{.HOSTNAME}} || {
           echo "Failed to perform DNS lookup for {{.HOSTNAME}}. Ensure the dnsutils pod is running.";
         }
+  
+  flux_reconcile:
+    desc: Force update Flux to pull in changes from your Git repository
+    cmds:
+      - flux reconcile source git flux-system {{.CLI_ARGS | default "-n flux-system"}}
