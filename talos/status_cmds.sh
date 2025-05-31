@@ -143,9 +143,6 @@ talosctl -n $IP etcd alarm list
 # --- after config-apply and bootstrap
 # --- nothing exits immediately
 
-waiting for all k8s nodes to report schedulable: OK
-
-
 kubectl get nodes -o json | jq -e '.items[0].status.conditions | min(.lastTransitionTime)'
 
 unset _BOOTSTRAP_SUCCESSFUL

@@ -2,31 +2,30 @@
 version: "3"
 
 tasks:
-  # Talos tasks
-
   cluster_status:
     desc: Cluster status
     summary: Determine status of the cluster
     ignore_error: true
     cmds:
-      - for:
-          var: NODE_NUMBERS
-        vars:
-          NODE: "cp{{ .ITEM }}"
-          NODE_IP: "192.168.4.1{{ .ITEM }}"
-        task: node_check
+      - for: { var: NODE_NUMBERS }
+        task: node_check:{{ .ITEM }}
+      - talosctl --nodes cp0 health --wait-timeout=1s
       - kubectl get nodes
       - kubectl get pods --all-namespaces
       - kubectl get services --all-namespaces
       - kubectl get secrets --all-namespaces
       - kubectl -n rook-ceph describe cephcluster
 
-  node_check:
+  node_check:*:
     desc: Node status
     summary: Determine status of the node
     ignore_error: false
     silent: true
     internal: true
+    vars:
+      N: "{{index .MATCH 0}}"
+      NODE_IP: "192.168.4.1{{ .N }}"
+      NODE: "cp{{ .N }}"
     cmds:
       - printf "\nChecking node {{ .NODE }}\n"
       - echo "Pinging node {{ .NODE_IP }}"
@@ -37,17 +36,18 @@ tasks:
   nuke_and_pave:
     desc: Nuke all nodes
     summary: Reset and wipe all nodes on the cluster
-    prompt: Nuke and pave?
-    cmds:
-      - for:
-          var: NODE_NUMBERS
-        vars:
-          NODE_IP: "192.168.4.1{{ .ITEM }}"
-        task: nuke_node
-  nuke_node:
+    deps:
+      - nuke_node:0
+      - nuke_node:1
+      - nuke_node:2
+
+  nuke_node:*:
     internal: true
     desc: Nuke node
     ignore_error: true
+    vars:
+      N: "{{index .MATCH 0}}"
+      NODE_IP: "192.168.4.1{{ .N }}"
     cmds:
       - echo "Nuking node {{ .NODE_IP }}"
       - talosctl reset --nodes {{ .NODE_IP }} --endpoints {{ .NODE_IP }} --talosconfig={{ .TALOSCONFIG }} --debug --graceful=false
@@ -80,9 +80,7 @@ tasks:
     status:
       - talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null
     cmds:
-      - task: talos_apply_config
-        vars:
-          N: "0"
+      - task: talos_apply_config:0
       - until talosctl -n {{ .INIT_NODE_IP }} dmesg | grep 'please run `talosctl bootstrap`' > /dev/null; do sleep 5; done
 
   talos_apply_config_cp1_cp2:
@@ -91,23 +89,13 @@ tasks:
     dir: "{{.TALOS_DIR}}"
     desc: Apply Talos config to cp1 and cp2
     prompt: Apply Talos config to cp1 and cp2?
-    vars:
-      N: 1 2
-    # deps:
-      # - talos_bootstrap_cp0
-    cmds:
-      - for:
-          var: N
-        vars:
-          N: "{{ .ITEM }}"
-        task: talos_apply_config
-      - echo "Waiting for nodes to be ready"
-      # - until kubectl wait nodes --for=condition=Ready=False --all --timeout=10m; do sleep 5; done
+    deps:
+      - talos_apply_config:1
+      - talos_apply_config:2
     preconditions:
       - which talosctl
 
-  talos_apply_config:
-    internal: true
+  talos_apply_config:*:
     dir: "{{ .TALOS_DIR }}"
     desc: Apply Talos config to node NODE_IP
     preconditions:
@@ -117,6 +105,7 @@ tasks:
     status:
       - talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "talos config has been applied to {{ .NODE_IP }}"
     vars:
+      N: "{{index .MATCH 0}}"
       NODE_IP: "192.168.4.1{{ .N }}"
       CONFIG_FILE: clusterconfig/boondoggle-cp{{ .N }}.yaml
     cmds:
@@ -158,10 +147,12 @@ tasks:
       - op user get --me
       - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
       - op connect server get {{ .OP_CONNECT_SERVER }}
+      - sh: |
+            [[ $(op connect token list --format json | jq '[.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}")] | length') -le 1 ]]
+        # msg: "ERROR: Duplicate 1Password connect tokens named {{ .OP_CONNECT_TOKEN }} found. Please remove them first."
   connect_server:
-    desc: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }}
-    prompt: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }}?
-    internal: true
+    desc: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}
+    prompt: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}?
     status:
       - op connect server get {{ .OP_CONNECT_SERVER }}
       - op document get {{ .OP_CONNECT_CREDENTIALS_NAME }} --vault {{ .OP_VAULT }} > /dev/null
@@ -171,6 +162,22 @@ tasks:
     preconditions:
       - op user get --me
       - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
+      - sh: |
+            [[ $(op connect server list --format json | jq '[.[] | select(.name=="{{ .OP_CONNECT_SERVER }}")] | length') -le 1 ]]
+        # msg: "Duplicate 1Password connect servers named {{ .OP_CONNECT_SERVER }} found. Please remove them first."
+      - sh: |
+            [[ $(op --vault {{ .OP_VAULT }} document list --format json | jq '[.[] | select(.title == "{{ .OP_CONNECT_CREDENTIALS_NAME }}")] | length') -le 1 ]]
+        # msg: "Duplicate 1Password document items named {{ .OP_CONNECT_CREDENTIALS_NAME }} found. Please remove them first."
+  delete_connect:
+    desc: Delete 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}
+    prompt: Delete 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}?
+    cmds:
+      - op --vault {{ .OP_VAULT }} connect server list --format json | jq -r '.[].id' | xargs -I'{}' op connect server delete '{}'
+      - op --vault {{ .OP_VAULT }} document list --format json | jq '.[] | select(.title == "{{ .OP_CONNECT_CREDENTIALS_NAME }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} item delete '{}'
+      - op --vault {{ .OP_VAULT }} connect token list --format json | jq '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} connect token delete '{}'
+      - op --vault {{ .OP_VAULT }} item list --format json | jq '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} item delete '{}'
+    preconditions:
+      - op user get --me
 
   # Kubernetes tasks
   k8s_apps:
@@ -178,7 +185,7 @@ tasks:
     prompt: Bootstrap Kubernetes Apps [ROOK_DISK=required]?
     deps:
       - 1password
-      # - talos_apply_config_cp1_cp2
+      # TODO: need fast status check talosctl bootstrap
     cmds:
       - kubectl config set-cluster {{ .CONTEXT }} --server https://{{ .RANDOM_CONTROLLER }}:6443
       - defer: talosctl kubeconfig --nodes {{ .RANDOM_CONTROLLER }} --force {{ .CLUSTER_DIR }}
@@ -214,20 +221,3 @@ tasks:
       - test -f {{ .BOOTSTRAP_KUBERNETES_DIR }}/helmfile.yaml
       - test -f {{ .BOOTSTRAP_KUBERNETES_DIR }}/resources.yaml
       - which helmfile jq kubectl op talosctl
-
-
-  sync-secrets:
-    desc: Sync all ExternalSecrets
-    cmds:
-      - for: { var: SECRETS, split: "\n" }
-        cmd: kubectl --namespace {{splitList "," .ITEM | first}} annotate externalsecret {{splitList "," .ITEM | last}} force-sync="{{now | unixEpoch}}" --overwrite
-    vars:
-      SECRETS:
-        sh: kubectl get externalsecret --all-namespaces --no-headers --output=jsonpath='{range .items[*]}{.metadata.namespace},{.metadata.name}{"\n"}{end}'
-    preconditions:
-      - which kubectl
-
-  reconcile:
-    desc: Force update Flux to pull in changes from your Git repository
-    cmds:
-      - flux reconcile source git flux-system {{.CLI_ARGS | default "-n flux-system"}}

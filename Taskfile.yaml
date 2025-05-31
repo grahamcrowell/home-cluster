@@ -21,7 +21,9 @@ vars:
   OP_VAULT: Kubernetes
 
 includes:
-  bootstrap: .taskfiles/bootstrap
+  bootstrap: .taskfiles/bootstrap.Taskfile.yaml
+  kubernetes: .taskfiles/kubernetes.Taskfile.yaml
+  secrets: .taskfiles/secrets.Taskfile.yaml
 
 tasks:
 
