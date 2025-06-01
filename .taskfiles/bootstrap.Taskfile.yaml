@@ -69,6 +69,15 @@ tasks:
       - test -f clusterconfig/boondoggle-cp0.yaml
       - test -f clusterconfig/boondoggle-cp1.yaml
       - test -f clusterconfig/boondoggle-cp2.yaml
+  
+  talos_nodes:
+    dir: "{{.TALOS_DIR}}"
+    desc: Bootstrap Talos nodes
+    prompt: Bootstrap Talos nodes?
+    cmds:
+      - task: talos_apply_config_cp0
+      - task: talos_bootstrap_cp0
+      - task: talos_apply_config_cp1_cp2
 
   talos_apply_config_cp0:
     dir: "{{.TALOS_DIR}}"
@@ -135,30 +144,32 @@ tasks:
 
   # 1Password tasks
   1password:
-    desc: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN }} on server named {{ .OP_CONNECT_SERVER }}
-    prompt: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN }} on server named {{ .OP_CONNECT_SERVER }}?
+    desc: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN_LABEL }} on server named {{ .OP_CONNECT_SERVER }} and save to field {{ .OP_CONNECT_TOKEN_LABEL }} in {{ .OP_CONNECT_ITEM }} item
+    prompt: Create new 1Password connect token named {{ .OP_CONNECT_TOKEN_LABEL }} on server named {{ .OP_CONNECT_SERVER }} and save to field {{ .OP_CONNECT_TOKEN_LABEL }} in {{ .OP_CONNECT_ITEM }} item?
     deps:
       - connect_server
     status:
-      - op connect token list --format json | jq --exit-status '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}")'
-    cmds:
-      - token=$(op connect token create {{ .OP_CONNECT_TOKEN }} --server {{ .OP_CONNECT_SERVER }} --vault {{ .OP_VAULT }}) && op item create --vault {{ .OP_VAULT }} --category "API Credential" --title {{.OP_CONNECT_TOKEN}} "credential=$token"
+      - op connect token list --format json | jq --exit-status '.[] | select(.name=="{{ .OP_CONNECT_TOKEN_LABEL }}")'
+    cmds: 
+      - token=$(op connect --vault {{ .OP_VAULT }} token create {{ .OP_CONNECT_TOKEN_LABEL }} --server {{ .OP_CONNECT_SERVER }}) && op --vault {{ .OP_VAULT }} item edit --category "Password" --title {{ .OP_CONNECT_ITEM }} "{{ .OP_CONNECT_TOKEN_LABEL }}[Text]=$token"
     preconditions:
       - op user get --me
       - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
       - op connect server get {{ .OP_CONNECT_SERVER }}
+      - op --vault {{ .OP_VAULT }} item list --format=json | jq --exit-status '.[] | select(.title=="{{ .OP_CONNECT_ITEM }}")'
       - sh: |
-            [[ $(op connect token list --format json | jq '[.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}")] | length') -le 1 ]]
-        # msg: "ERROR: Duplicate 1Password connect tokens named {{ .OP_CONNECT_TOKEN }} found. Please remove them first."
+            [[ $(op connect token list --format json | jq '[.[] | select(.name=="{{ .OP_CONNECT_TOKEN_LABEL }}")] | length') -le 1 ]]
+        # msg: "ERROR: Duplicate 1Password connect tokens named {{ .OP_CONNECT_TOKEN_LABEL }} found. Please remove them first."
   connect_server:
-    desc: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}
-    prompt: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}?
+    desc: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }} and item named {{ .OP_CONNECT_ITEM }}
+    prompt: Create new 1Password connect server named {{ .OP_CONNECT_SERVER }} and item named {{ .OP_CONNECT_ITEM }}?
     status:
       - op connect server get {{ .OP_CONNECT_SERVER }}
-      - op document get {{ .OP_CONNECT_CREDENTIALS_NAME }} --vault {{ .OP_VAULT }} > /dev/null
+      - op --vault {{ .OP_VAULT }} item get {{ .OP_CONNECT_ITEM }} --fields label={{ .OP_CONNECT_CREDENTIALS_LABEL }} > /dev/null
     cmds:
-      - op connect server create {{ .OP_CONNECT_SERVER }} --vaults {{ .OP_VAULT }}
-      - cat 1password-credentials.json | op document create --vault {{ .OP_VAULT }} --file-name 1password-credentials.json --title {{ .OP_CONNECT_CREDENTIALS_NAME }}
+      - op connect server create {{ .OP_CONNECT_SERVER }}
+      - until op connect server list --format json | jq --exit-status '.[] | select(.name=="{{ .OP_CONNECT_SERVER }}")'; do echo "waiting for connect server"; sleep 1; done
+      - op --vault {{ .OP_VAULT }} item create --category "Password" --title {{ .OP_CONNECT_ITEM }} "{{ .OP_CONNECT_CREDENTIALS_LABEL }}[Text]=$(cat 1password-credentials.json | base64)"
     preconditions:
       - op user get --me
       - op vault list --format=json | jq --exit-status '.[] | select(.name=="{{ .OP_VAULT }}")'
@@ -166,16 +177,23 @@ tasks:
             [[ $(op connect server list --format json | jq '[.[] | select(.name=="{{ .OP_CONNECT_SERVER }}")] | length') -le 1 ]]
         # msg: "Duplicate 1Password connect servers named {{ .OP_CONNECT_SERVER }} found. Please remove them first."
       - sh: |
-            [[ $(op --vault {{ .OP_VAULT }} document list --format json | jq '[.[] | select(.title == "{{ .OP_CONNECT_CREDENTIALS_NAME }}")] | length') -le 1 ]]
-        # msg: "Duplicate 1Password document items named {{ .OP_CONNECT_CREDENTIALS_NAME }} found. Please remove them first."
+            [[ $(op --vault {{ .OP_VAULT }} item list --format json | jq '[.[] | select(.title == "{{ .OP_CONNECT_ITEM }}")] | length') -le 1 ]]
+        # msg: "Duplicate 1Password document items named {{ .OP_CONNECT_ITEM }} found. Please remove them first."
   delete_connect:
-    desc: Delete 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}
-    prompt: Delete 1Password connect server named {{ .OP_CONNECT_SERVER }} and item {{ .OP_CONNECT_CREDENTIALS_NAME }}?
+    desc: Delete 1Password connect server named {{ .OP_CONNECT_SERVER }}, token named {{ .OP_CONNECT_TOKEN_LABEL }} and item named {{ .OP_CONNECT_ITEM }}
+    prompt: Delete 1Password connect server named {{ .OP_CONNECT_SERVER }}, token named {{ .OP_CONNECT_TOKEN_LABEL }} and item named {{ .OP_CONNECT_ITEM }}?
     cmds:
-      - op --vault {{ .OP_VAULT }} connect server list --format json | jq -r '.[].id' | xargs -I'{}' op connect server delete '{}'
-      - op --vault {{ .OP_VAULT }} document list --format json | jq '.[] | select(.title == "{{ .OP_CONNECT_CREDENTIALS_NAME }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} item delete '{}'
-      - op --vault {{ .OP_VAULT }} connect token list --format json | jq '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} connect token delete '{}'
-      - op --vault {{ .OP_VAULT }} item list --format json | jq '.[] | select(.name=="{{ .OP_CONNECT_TOKEN }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} item delete '{}'
+      - op connect server list --format json | jq -r '.[].id' | xargs -I'{}' op connect server delete '{}'
+      - op connect token list --format json | jq '.[] | select(.name=="{{ .OP_CONNECT_TOKEN_LABEL }}") | .id' | xargs -I'{}' op connect token delete '{}'
+      - op --vault {{ .OP_VAULT }} item list --format json | jq '.[] | select(.title=="{{ .OP_CONNECT_ITEM }}") | .id' | xargs -I'{}' op --vault {{ .OP_VAULT }} item delete '{}'
+    preconditions:
+      - op user get --me
+  status_connect:
+    desc: List connect server {{ .OP_CONNECT_SERVER }}, token, and items
+    cmds:
+      - op connect server list --format json | jq --exit-status '.[] | select(.title=="{{ .OP_CONNECT_SERVER }}")' || echo "Connect server {{ .OP_CONNECT_SERVER }} not found"
+      - op connect token list --format json | jq --exit-status '.[] | select(.name=="{{ .OP_CONNECT_TOKEN_LABEL }}")' || echo "Connect token {{ .OP_CONNECT_TOKEN_LABEL }} not found"
+      - op --vault {{ .OP_VAULT }} item get {{ .OP_CONNECT_ITEM }} || echo "Item {{ .OP_CONNECT_ITEM }} not found"
     preconditions:
       - op user get --me
 
