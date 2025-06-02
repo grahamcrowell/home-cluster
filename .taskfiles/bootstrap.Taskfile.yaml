@@ -119,7 +119,7 @@ tasks:
       NODE_IP: "192.168.4.1{{ .N }}"
       CONFIG_FILE: clusterconfig/boondoggle-cp{{ .N }}.yaml
     cmds:
-      - echo "Applying Talos config to node {{ .N }}"
+      - echo "Applying Talos config to node cp{{ .N }}"
       - talosctl apply-config --nodes {{ .NODE_IP }} --insecure --file {{ .CONFIG_FILE }}
       - until talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1; do echo "waiting for node {{ .NODE_IP }}"; sleep 5; done
 
@@ -197,6 +197,23 @@ tasks:
       - op --vault {{ .OP_VAULT }} item get {{ .OP_CONNECT_ITEM }} || echo "Item {{ .OP_CONNECT_ITEM }} not found"
     preconditions:
       - op user get --me
+
+  zero_rook_drive:*:
+    desc: Zero Rook drive
+    vars:
+      N: "{{index .MATCH 0}}"
+      NODE: "cp{{ .N }}"
+      DEVICE_ID: 
+        sh: talosctl --nodes cp0 get disks --output json | jq -r --slurp '.[] | select(.spec.model =="{{ .ROOK_DISK }}") | .metadata.id'
+    cmds:
+      - echo "Zeroing rook-ceph drive with device ID {{ .DEVICE_ID }} on node {{ .NODE }}"
+      - talosctl --nodes {{ .NODE }} wipe disk {{ .DEVICE_ID }} --method ZEROES &
+      - talosctl --nodes {{ .NODE }} dmesg
+    requires:
+      vars: [ROOK_DISK]
+    preconditions:
+      - talosctl config info
+      - talosctl --nodes {{ .NODE }} dmesg > /dev/null 2>&1
 
   # Kubernetes tasks
   k8s_apps:

@@ -25,9 +25,9 @@
 -   zero rook drives (takes 30mins to 6hrs)
 
 ```bash
-talosctl --nodes cp0 wipe disk sdc --method ZEROES &
-talosctl --nodes cp1 wipe disk sdc --method ZEROES &
-talosctl --nodes cp2 wipe disk sdc --method ZEROES &
+task bootstrap:zero_rook_drive:0
+task bootstrap:zero_rook_drive:1
+task bootstrap:zero_rook_drive:2
 ```
 
 ### Bootstrap
