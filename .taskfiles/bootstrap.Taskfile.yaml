@@ -5,11 +5,12 @@ tasks:
   cluster_status:
     desc: Cluster status
     summary: Determine status of the cluster
-    ignore_error: true
+    ignore_error: false
     cmds:
       - for: { var: NODE_NUMBERS }
         task: node_check:{{ .ITEM }}
       - talosctl --nodes cp0 health --wait-timeout=1s
+      - talosctl get disks --output json | jq -r --slurp '.[] | select(.spec.model != null) | [.node, .spec.dev_path,.spec.model] | @tsv' | sort -k1,1 -k3,3 | column -t
       - kubectl get nodes
       - kubectl get pods --all-namespaces
       - kubectl get services --all-namespaces
@@ -33,6 +34,24 @@ tasks:
       - ping -t 1 -c 1 {{ .NODE_IP }} | grep '1 packets received, 0.0% packet loss' >/dev/null && echo "OK - Ping successful" || { echo "ERROR - Node {{ .NODE_IP }} unreachable"; exit 1; }
       - echo "Checking if config applied"
       - talosctl -n {{ .NODE_IP }} dmesg >/dev/null 2>&1 && echo "OK - talos config has been applied to {{ .NODE_IP }}" || { echo "ERROR - talos config has not been applied to {{ .NODE_IP }}"; exit 1; }
+      - task: gpt_error_check:{{ .N }}
+
+  gpt_error_check:*:
+    desc: Check logs for GUID Partition Table error 'Use GNU Parted to correct GPT errors'
+    ignore_error: false
+    silent: true
+    vars:
+      N: "{{index .MATCH 0}}"
+      NODE_IP: "192.168.4.1{{ .N }}"
+      NODE: "cp{{ .N }}"
+      ALLOWED_ERROR_AGE: 35
+    cmd: |
+      talosctl -n {{ .NODE_IP }} get disks --output json | jq -r --slurp '.[] | select(.spec.model != null) | [.node, .spec.dev_path,.spec.model] | @tsv' | sort -k1,1 -k3,3 | column -t
+      t0=$(talosctl -n {{ .NODE_IP }} dmesg | grep "Use GNU Parted to correct GPT errors." | sed 's/.*\[\(.*\)\..*Z\].*/\1/' | tail -n 1) || { echo "OK - No GPT errors"; exit 0; }
+      t1=$(date -u +"%Y-%m-%dT%H:%M:%S")
+      minutes=$(( ($(date -j -f "%Y-%m-%dT%H:%M:%S" $t1 "+%s") - $(date -j -f "%Y-%m-%dT%H:%M:%S" $t0 "+%s")) / 60 ))
+      echo "WARNING - GPT error log found at: $t0 or $minutes minutes ago"
+      [[ $minutes < {{ .ALLOWED_ERROR_AGE }} ]] && { echo "ERROR - recent (last {{ .ALLOWED_ERROR_AGE }} mins) GPT errors found"; exit 1; } || { echo "OK - no recent (last {{ .ALLOWED_ERROR_AGE }} mins) GPT errors"; exit 0; } 
 
   nuke_and_pave:
     desc: Nuke all nodes
@@ -199,7 +218,7 @@ tasks:
       - op user get --me
 
   zero_rook_drive:*:
-    desc: Zero Rook drive
+    desc: Zero Rook drive "{{ .ROOK_DISK }}"
     vars:
       N: "{{index .MATCH 0}}"
       NODE: "cp{{ .N }}"
